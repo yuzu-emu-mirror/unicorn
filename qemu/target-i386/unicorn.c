@@ -1128,8 +1128,18 @@ static uc_err x86_option(struct uc_struct *uc, uc_opt_type type, size_t value)
     if (type != UC_OPT_WINDOWS_TIB)
         return UC_ERR_OPT_INVALID;
 
-    // TODO: setup limit?
-    X86_CPU(uc, mycpu)->env.segs[R_FS].base = value;
+    switch(uc->mode) {
+        default:
+            break;
+        case UC_MODE_32:
+            // TODO: setup limit?
+            X86_CPU(uc, mycpu)->env.segs[R_FS].base = value;
+            break;
+        case UC_MODE_64:
+            // TODO: setup limit?
+            X86_CPU(uc, mycpu)->env.segs[R_GS].base = value;
+            break;
+    }
 
     return UC_ERR_OK;
 }
