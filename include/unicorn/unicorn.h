@@ -138,7 +138,13 @@ typedef enum uc_err {
     UC_ERR_FETCH_UNALIGNED,  // Unaligned fetch
     UC_ERR_HOOK_EXIST,  // hook for this event already existed
     UC_ERR_RESOURCE,    // Insufficient resource: uc_emu_start()
+    UC_ERR_OPT_INVALID, // Invalid option type: uc_option()
 } uc_err;
+
+// Runtime option for the Unicorn engine
+typedef enum uc_opt_type {
+	UC_OPT_WINDOWS_TIB = 1,	// Setup Windows Thread Information Block
+} uc_opt_type;
 
 
 /*
@@ -587,6 +593,20 @@ uc_err uc_mem_protect(uc_engine *uc, uint64_t address, size_t size, uint32_t per
 */
 UNICORN_EXPORT
 uc_err uc_mem_regions(uc_engine *uc, uc_mem_region **regions, uint32_t *count);
+
+/*
+ Set option for Unicorn engine at runtime
+
+ @uc: handle returned by uc_open()
+ @type: type of option to be set
+ @value: option value corresponding with @type
+
+ @return: UC_ERR_OK on success, or other value on failure.
+ Refer to uc_err enum for detailed error.
+*/
+UNICORN_EXPORT
+uc_err uc_option(uc_engine *uc, uc_opt_type type, size_t value);
+
 
 #ifdef __cplusplus
 }

@@ -1108,3 +1108,12 @@ uc_err uc_query(uc_engine *uc, uc_query_type type, size_t *result)
 
     return UC_ERR_OK;
 }
+
+UNICORN_EXPORT
+uc_err uc_option(uc_engine *uc, uc_opt_type type, size_t value)
+{
+    if (uc->option)
+        return uc->option(uc, type, value);
+    else
+        return UC_ERR_OPT_INVALID;
+}

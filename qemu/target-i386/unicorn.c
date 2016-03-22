@@ -1121,6 +1121,19 @@ static bool x86_stop_interrupt(int intno)
     }
 }
 
+static uc_err x86_option(struct uc_struct *uc, uc_opt_type type, size_t value)
+{
+    CPUState *mycpu = first_cpu;
+
+    if (type != UC_OPT_WINDOWS_TIB)
+        return UC_ERR_OPT_INVALID;
+
+    // TODO: setup limit?
+    X86_CPU(uc, mycpu)->env.segs[R_FS].base = value;
+
+    return UC_ERR_OK;
+}
+
 void pc_machine_init(struct uc_struct *uc);
 
 __attribute__ ((visibility ("default")))
@@ -1138,5 +1151,8 @@ void x86_uc_init(struct uc_struct* uc)
     uc->release = x86_release;
     uc->set_pc = x86_set_pc;
     uc->stop_interrupt = x86_stop_interrupt;
+    uc->option = x86_option;
     uc_common_init(uc);
 }
+
+

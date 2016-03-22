@@ -110,6 +110,7 @@ _setup_prototype(_uc, "uc_mem_map_ptr", ucerr, uc_engine, ctypes.c_uint64, ctype
 _setup_prototype(_uc, "uc_mem_unmap", ucerr, uc_engine, ctypes.c_uint64, ctypes.c_size_t)
 _setup_prototype(_uc, "uc_mem_protect", ucerr, uc_engine, ctypes.c_uint64, ctypes.c_size_t, ctypes.c_uint32)
 _setup_prototype(_uc, "uc_query", ucerr, uc_engine, ctypes.c_uint32, ctypes.POINTER(ctypes.c_size_t))
+_setup_prototype(_ks, "uc_option", ucerr, uc_engine, c_int, c_void_p)
 
 # uc_hook_add is special due to variable number of arguments
 _uc.uc_hook_add = getattr(_uc, "uc_hook_add")
@@ -322,6 +323,19 @@ class Uc(object):
             raise UcError(status)
         return result.value
 
+    # return Windows TIB
+    @property
+    def windows_tib(self):
+        return self._windows_tib
+
+    # Windows TIB setter
+    @windows_tib.setter
+    def windows_tib(self, base_addr):
+        status = _uc.uc_option(self._uch, UC_OPT_WINDOWS_TIB, base_addr)
+        if status != UC_ERR_OK:
+            raise UcError(status)
+        # save this address
+        self._windows_tib = base_addr
 
     def _hookcode_cb(self, handle, address, size, user_data):
         # call user's callback with self object
