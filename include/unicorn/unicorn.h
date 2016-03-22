@@ -143,7 +143,7 @@ typedef enum uc_err {
 
 // Runtime option for the Unicorn engine
 typedef enum uc_opt_type {
-	UC_OPT_WINDOWS_TIB = 1,	// Setup Windows Thread Information Block
+    UC_OPT_WINDOWS_TIB = 1,	// Setup Windows Thread Information Block
 } uc_opt_type;
 
 

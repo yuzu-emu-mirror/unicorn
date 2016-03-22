@@ -96,6 +96,8 @@ const char *uc_strerror(uc_err code)
             return "Fetch from unaligned memory (UC_ERR_FETCH_UNALIGNED)";
         case UC_ERR_RESOURCE:
             return "Insufficient resource (UC_ERR_RESOURCE)";
+        case UC_ERR_OPT_INVALID:
+            return "Invalid option (UC_ERR_OPT_INVALID)";
     }
 }
 
