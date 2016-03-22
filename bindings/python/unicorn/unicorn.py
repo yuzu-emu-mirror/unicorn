@@ -110,7 +110,7 @@ _setup_prototype(_uc, "uc_mem_map_ptr", ucerr, uc_engine, ctypes.c_uint64, ctype
 _setup_prototype(_uc, "uc_mem_unmap", ucerr, uc_engine, ctypes.c_uint64, ctypes.c_size_t)
 _setup_prototype(_uc, "uc_mem_protect", ucerr, uc_engine, ctypes.c_uint64, ctypes.c_size_t, ctypes.c_uint32)
 _setup_prototype(_uc, "uc_query", ucerr, uc_engine, ctypes.c_uint32, ctypes.POINTER(ctypes.c_size_t))
-_setup_prototype(_ks, "uc_option", ucerr, uc_engine, c_int, c_void_p)
+_setup_prototype(_uc, "uc_option", ucerr, uc_engine, c_int, c_void_p)
 
 # uc_hook_add is special due to variable number of arguments
 _uc.uc_hook_add = getattr(_uc, "uc_hook_add")
