@@ -426,6 +426,7 @@ void cpu_exec_init(CPUState *cpu, void *opaque)
     CPUArchState *env = cpu->env_ptr;
 
     cpu->as = NULL;
+    cpu->memory = NULL;
     cpu->cpu_index = 0;
     cpu->num_ases = 0;
     cpu->uc = uc;
