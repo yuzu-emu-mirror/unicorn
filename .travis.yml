@@ -28,3 +28,4 @@ addons:
   apt:
     packages:
     # mingw-w64 packages too old in precise
+
