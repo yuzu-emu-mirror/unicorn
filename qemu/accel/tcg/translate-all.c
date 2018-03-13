@@ -1316,10 +1316,7 @@ TranslationBlock *tb_gen_code(CPUState *cpu,
 #endif
 
     phys_pc = get_page_addr_code(env, pc);
-    /* UNICORN: Commented out
-    if (use_icount) {
-        cflags |= CF_USE_ICOUNT;
-    }*/
+
     tb = tb_alloc(env->uc, pc);
     if (unlikely(!tb)) {
  buffer_overflow:
