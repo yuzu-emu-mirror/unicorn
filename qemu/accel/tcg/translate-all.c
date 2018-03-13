@@ -1335,6 +1335,8 @@ TranslationBlock *tb_gen_code(CPUState *cpu,
     tb->cs_base = cs_base;
     tb->flags = flags;
     tb->cflags = cflags;
+    tb->trace_vcpu_dstate = 0;
+    tcg_ctx->tb_cflags = cflags;
 
 #ifdef CONFIG_PROFILER
     tcg_ctx->tb_count1++; /* includes aborted translations because of
