@@ -2439,7 +2439,6 @@
 #define tb_find_slow tb_find_slow_aarch64eb
 #define tb_flush tb_flush_aarch64eb
 #define tb_flush_jmp_cache tb_flush_jmp_cache_aarch64eb
-#define tb_free tb_free_aarch64eb
 #define tb_gen_code tb_gen_code_aarch64eb
 #define tb_hash_remove tb_hash_remove_aarch64eb
 #define tb_htable_lookup tb_htable_lookup_aarch64eb
@@ -2454,6 +2453,7 @@
 #define tb_page_remove tb_page_remove_aarch64eb
 #define tb_phys_hash_func tb_phys_hash_func_aarch64eb
 #define tb_phys_invalidate tb_phys_invalidate_aarch64eb
+#define tb_remove tb_remove_aarch64eb
 #define tb_reset_jump tb_reset_jump_aarch64eb
 #define tb_set_jmp_target tb_set_jmp_target_aarch64eb
 #define tcg_accel_class_init tcg_accel_class_init_aarch64eb

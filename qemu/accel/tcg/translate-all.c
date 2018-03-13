@@ -354,7 +354,7 @@ bool cpu_restore_state(CPUState *cpu, uintptr_t retaddr)
         if (tb->cflags & CF_NOCACHE) {
             /* one-shot translation, invalidate it immediately */
             tb_phys_invalidate(cpu->uc, tb, -1);
-            tb_free(cpu->uc, tb);
+            tb_remove(cpu->uc, tb);
         }
         return true;
     }
@@ -921,7 +921,7 @@ static TranslationBlock *tb_alloc(struct uc_struct *uc, target_ulong pc)
 }
 
 /* Called with tb_lock held.  */
-void tb_free(struct uc_struct *uc, TranslationBlock *tb)
+void tb_remove(struct uc_struct *uc, TranslationBlock *tb)
 {
     TCGContext *tcg_ctx = uc->tcg_ctx;
 
@@ -1857,7 +1857,7 @@ void cpu_io_recompile(CPUState *cpu, uintptr_t retaddr)
              * cpu_exec_nocache() */
             tb_phys_invalidate(cpu->uc, tb->orig_tb, -1);
         }
-        tb_free(env->uc, tb);
+        tb_remove(env->uc, tb);
     }
 
     /* TODO: If env->pc != tb->pc (i.e. the faulting instruction was not

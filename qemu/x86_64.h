@@ -2439,7 +2439,6 @@
 #define tb_find_slow tb_find_slow_x86_64
 #define tb_flush tb_flush_x86_64
 #define tb_flush_jmp_cache tb_flush_jmp_cache_x86_64
-#define tb_free tb_free_x86_64
 #define tb_gen_code tb_gen_code_x86_64
 #define tb_hash_remove tb_hash_remove_x86_64
 #define tb_htable_lookup tb_htable_lookup_x86_64
@@ -2454,6 +2453,7 @@
 #define tb_page_remove tb_page_remove_x86_64
 #define tb_phys_hash_func tb_phys_hash_func_x86_64
 #define tb_phys_invalidate tb_phys_invalidate_x86_64
+#define tb_remove tb_remove_x86_64
 #define tb_reset_jump tb_reset_jump_x86_64
 #define tb_set_jmp_target tb_set_jmp_target_x86_64
 #define tcg_accel_class_init tcg_accel_class_init_x86_64

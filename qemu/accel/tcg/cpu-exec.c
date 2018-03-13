@@ -111,7 +111,7 @@ static void cpu_exec_nocache(CPUState *cpu, int max_cycles,
     //trace_exec_tb_nocache(tb, tb->pc);
     cpu_tb_exec(cpu, tb);
     tb_phys_invalidate(env->uc, tb, -1);
-    tb_free(env->uc, tb);
+    tb_remove(env->uc, tb);
 }
 
 struct tb_desc {

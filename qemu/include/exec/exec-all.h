@@ -291,7 +291,7 @@ static inline uint32_t curr_cflags(struct uc_struct *uc)
 //         | (use_icount ? CF_USE_ICOUNT : 0);
 }
 
-void tb_free(struct uc_struct *uc, TranslationBlock *tb);
+void tb_remove(struct uc_struct *uc, TranslationBlock *tb);
 void tb_flush(CPUState *cpu);
 void tb_phys_invalidate(struct uc_struct *uc,
     TranslationBlock *tb, tb_page_addr_t page_addr);
