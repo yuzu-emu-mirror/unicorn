@@ -61,6 +61,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 typedef void* gpointer;
 typedef const void *gconstpointer;
 typedef int gint;
+typedef signed char gint8;
+typedef unsigned char guint8;
+typedef signed short gint16;
+typedef unsigned short guint16;
 typedef uint32_t guint32;
 typedef uint64_t guint64;
 typedef unsigned int guint;
@@ -71,12 +75,24 @@ typedef unsigned long gulong;
 typedef unsigned long gsize;
 typedef signed long gssize;
 
-typedef gint (*GCompareDataFunc)(gconstpointer a,
-                gconstpointer b,
-                gpointer user_data);
-typedef void (*GFunc)(gpointer data, gpointer user_data);
-typedef gint (*GCompareFunc)(gconstpointer v1, gconstpointer v2);
+typedef gint (*GCompareFunc)(gconstpointer a, gconstpointer b);
+typedef gint (*GCompareDataFunc)(gconstpointer a, gconstpointer b,
+                                 gpointer user_data);
+typedef gboolean (*GEqualFunc)(gconstpointer a, gconstpointer b);
 typedef void (*GDestroyNotify)(gpointer data);
+typedef void (*GFunc)(gpointer data, gpointer user_data);
+typedef guint (*GHashFunc)(gconstpointer key);
+typedef void (*GHFunc)(gpointer key, gpointer value, gpointer user_data);
+typedef void (*GFreeFunc)(gpointer data);
+
+/* Tree traverse orders */
+typedef enum
+{
+  G_IN_ORDER,
+  G_PRE_ORDER,
+  G_POST_ORDER,
+  G_LEVEL_ORDER
+} GTraverseType;
 
 guint g_direct_hash(gconstpointer v);
 gboolean g_direct_equal(gconstpointer v1, gconstpointer v2);
@@ -177,6 +193,36 @@ gboolean g_hash_table_iter_next(GHashTableIter *iter, gpointer *key, gpointer *v
 GHashTable *g_hash_table_iter_get_hash_table(GHashTableIter *iter);
 void g_hash_table_iter_remove(GHashTableIter *iter);
 void g_hash_table_iter_steal(GHashTableIter *iter);
+
+/* Tree code */
+typedef struct _GTree  GTree;
+
+typedef gboolean (*GTraverseFunc) (gpointer  key,
+                                   gpointer  value,
+                                   gpointer  data);
+
+GTree *g_tree_new(GCompareFunc key_compare_func);
+GTree *g_tree_new_with_data(GCompareDataFunc key_compare_func,
+                            gpointer key_compare_data);
+GTree *g_tree_new_full(GCompareDataFunc key_compare_func,
+                       gpointer key_compare_data,
+                       GDestroyNotify key_destroy_func,
+                       GDestroyNotify value_destroy_func);
+GTree *g_tree_ref(GTree *tree);
+void g_tree_unref(GTree *tree);
+void g_tree_destroy(GTree *tree);
+void g_tree_insert(GTree *tree, gpointer key, gpointer value);
+void g_tree_replace(GTree *tree, gpointer key, gpointer value);
+gboolean g_tree_remove(GTree *tree, gconstpointer key);
+gboolean g_tree_steal(GTree *tree, gconstpointer key);
+gpointer g_tree_lookup(GTree *tree, gconstpointer key);
+gboolean g_tree_lookup_extended(GTree *tree, gconstpointer lookup_key,
+                                gpointer *orig_key, gpointer *value);
+void g_tree_foreach(GTree *tree, GTraverseFunc func, gpointer user_data);
+gpointer g_tree_search(GTree *tree, GCompareFunc search_func, gconstpointer user_data);
+gint g_tree_height(GTree *tree);
+gint g_tree_nnodes(GTree *tree);
+void g_tree_traverse(GTree *tree, GTraverseFunc traverse_func, GTraverseType traverse_type, gpointer user_data);
 
 /* replacement for g_malloc dependency */
 void g_free(gpointer ptr);

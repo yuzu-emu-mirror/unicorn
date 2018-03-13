@@ -250,8 +250,6 @@ static int encode_search(TCGContext *tcg_ctx, TranslationBlock *tb, uint8_t *blo
     uint8_t *p = block;
     int i, j, n;
 
-    tb->tc.search = block;
-
     for (i = 0, n = tb->icount; i < n; ++i) {
         target_ulong prev;
 
@@ -287,7 +285,7 @@ static int cpu_restore_state_from_tb(CPUState *cpu, TranslationBlock *tb,
     target_ulong data[TARGET_INSN_START_WORDS] = { tb->pc };
     uintptr_t host_pc = (uintptr_t)tb->tc.ptr;
     CPUArchState *env = cpu->env_ptr;
-    uint8_t *p = tb->tc.search;
+    uint8_t *p = tb->tc.ptr + tb->tc.size;
     int i, j, num_insns = tb->icount;
 #ifdef CONFIG_PROFILER
     int64_t ti = profile_getclock();
@@ -806,6 +804,48 @@ void free_code_gen_buffer(struct uc_struct *uc)
 }
 #endif /* USE_STATIC_CODE_GEN_BUFFER, USE_MMAP */
 
+/* compare a pointer @ptr and a tb_tc @s */
+static int ptr_cmp_tb_tc(const void *ptr, const struct tb_tc *s)
+{
+    if (ptr >= s->ptr + s->size) {
+        return 1;
+    } else if (ptr < s->ptr) {
+        return -1;
+    }
+    return 0;
+}
+
+static gint tb_tc_cmp(gconstpointer ap, gconstpointer bp)
+{
+    const struct tb_tc *a = ap;
+    const struct tb_tc *b = bp;
+
+    /*
+     * When both sizes are set, we know this isn't a lookup.
+     * This is the most likely case: every TB must be inserted; lookups
+     * are a lot less frequent.
+     */
+    if (likely(a->size && b->size)) {
+        if (a->ptr > b->ptr) {
+            return 1;
+        } else if (a->ptr < b->ptr) {
+            return -1;
+        }
+        /* a->ptr == b->ptr should happen only on deletions */
+        g_assert(a->size == b->size);
+        return 0;
+    }
+    /*
+     * All lookups have either .size field set to 0.
+     * From the glib sources we see that @ap is always the lookup key. However
+     * the docs provide no guarantee, so we just mark this case as likely.
+     */
+    if (likely(a->size == 0)) {
+        return ptr_cmp_tb_tc(a->ptr, b);
+    }
+    return ptr_cmp_tb_tc(b->ptr, a);
+}
+
 static inline void code_gen_alloc(struct uc_struct *uc, size_t tb_size)
 {
     TCGContext *tcg_ctx = uc->tcg_ctx;
@@ -825,12 +865,7 @@ static inline void code_gen_alloc(struct uc_struct *uc, size_t tb_size)
        still haven't deducted the prologue from the buffer size here,
        but that's minimal and won't affect the estimate much.  */
     /* size this conservatively -- realloc later if needed */
-    tcg_ctx->tb_ctx.tbs_size =
-        tcg_ctx->code_gen_buffer_size / CODE_GEN_AVG_BLOCK_SIZE / 8;
-    if (unlikely(!tcg_ctx->tb_ctx.tbs_size)) {
-        tcg_ctx->tb_ctx.tbs_size = 64 * 1024;
-    }
-    tcg_ctx->tb_ctx.tbs = g_new(TranslationBlock *, tcg_ctx->tb_ctx.tbs_size);
+    tcg_ctx->tb_ctx.tb_tree = g_tree_new(tb_tc_cmp);
 }
 
 static void tb_htable_init(struct uc_struct *uc)
@@ -877,18 +912,11 @@ static TranslationBlock *tb_alloc(struct uc_struct *uc, target_ulong pc)
 {
     TCGContext *tcg_ctx = uc->tcg_ctx;
     TranslationBlock *tb;
-    TBContext *ctx;
 
     tb = tcg_tb_alloc(tcg_ctx);
     if (unlikely(tb == NULL)) {
         return NULL;
     }
-    ctx = &tcg_ctx->tb_ctx;
-    if (unlikely(ctx->nb_tbs == ctx->tbs_size)) {
-        ctx->tbs_size *= 2;
-        ctx->tbs = g_renew(TranslationBlock *, ctx->tbs, ctx->tbs_size);
-    }
-    ctx->tbs[ctx->nb_tbs++] = tb;
     return tb;
 }
 
@@ -897,16 +925,7 @@ void tb_free(struct uc_struct *uc, TranslationBlock *tb)
 {
     TCGContext *tcg_ctx = uc->tcg_ctx;
 
-    /* In practice this is mostly used for single use temporary TB
-       Ignore the hard cases and just back up if this TB happens to
-       be the last one generated.  */
-    if (tcg_ctx->tb_ctx.nb_tbs > 0 &&
-            tb == tcg_ctx->tb_ctx.tbs[tcg_ctx->tb_ctx.nb_tbs - 1]) {
-        size_t struct_size = ROUND_UP(sizeof(*tb), uc->qemu_icache_linesize);
-
-        tcg_ctx->code_gen_ptr = tb->tc.ptr - struct_size;
-        tcg_ctx->tb_ctx.nb_tbs--;
-    }
+    g_tree_remove(tcg_ctx->tb_ctx.tb_tree, &tb->tc);
 }
 
 static inline void invalidate_page_bitmap(PageDesc *p)
@@ -963,11 +982,12 @@ void tb_flush(CPUState *cpu)
     TCGContext *tcg_ctx = uc->tcg_ctx;
 
     if (DEBUG_TB_FLUSH_GATE) {
-        printf("qemu: flush code_size=%td nb_tbs=%d avg_tb_size=%td\n",
-               tcg_ctx->code_gen_ptr - tcg_ctx->code_gen_buffer,
-               tcg_ctx->tb_ctx.nb_tbs, tcg_ctx->tb_ctx.nb_tbs > 0 ?
-               (tcg_ctx->code_gen_ptr - tcg_ctx->code_gen_buffer) /
-               tcg_ctx->tb_ctx.nb_tbs : 0);
+        size_t nb_tbs = g_tree_nnodes(tcg_ctx->tb_ctx.tb_tree);
+
+        printf("qemu: flush code_size=%td nb_tbs=%zu avg_tb_size=%zu\n",
+               tcg_ctx->code_gen_ptr - tcg_ctx->code_gen_buffer, nb_tbs,
+               nb_tbs > 0 ?
+               (size_t)((tcg_ctx->code_gen_ptr - tcg_ctx->code_gen_buffer) / nb_tbs : 0));
     }
     if ((unsigned long)((char*)tcg_ctx->code_gen_ptr - (char*)tcg_ctx->code_gen_buffer)
         > tcg_ctx->code_gen_buffer_size) {
@@ -977,7 +997,10 @@ void tb_flush(CPUState *cpu)
     cpu_tb_jmp_cache_clear(cpu);
     atomic_mb_set(&cpu->tb_flushed, true);
 
-    tcg_ctx->tb_ctx.nb_tbs = 0;
+    /* Increment the refcount first so that destroy acts as a reset */
+    g_tree_ref(tcg_ctx->tb_ctx.tb_tree);
+    g_tree_destroy(tcg_ctx->tb_ctx.tb_tree);
+
     qht_reset_size(&tcg_ctx->tb_ctx.htable, CODE_GEN_HTABLE_SIZE);
     page_flush_tb(uc);
 
@@ -1393,6 +1416,7 @@ TranslationBlock *tb_gen_code(CPUState *cpu,
     if (unlikely(search_size < 0)) {
         goto buffer_overflow;
     }
+    tb->tc.size = gen_code_size;
 
 #ifdef CONFIG_PROFILER
     tcg_ctx.code_time += profile_getclock();
@@ -1464,6 +1488,7 @@ TranslationBlock *tb_gen_code(CPUState *cpu,
      * through the physical hash table and physical page list.
      */
     tb_link_page(cpu->uc, tb, phys_pc, phys_page2);
+    g_tree_insert(tcg_ctx->tb_ctx.tb_tree, &tb->tc, tb);
     return tb;
 }
 
@@ -1720,38 +1745,18 @@ static bool tb_invalidate_phys_page(tb_page_addr_t addr, uintptr_t pc)
 }
 #endif
 
-/* find the TB 'tb' such that tb[0].tc.ptr <= tc_ptr <
-   tb[1].tc.ptr. Return NULL if not found */
+/*
+ * Find the TB 'tb' such that
+ * tb->tc.ptr <= tc_ptr < tb->tc.ptr + tb->tc.size
+ * Return NULL if not found.
+ */
 static TranslationBlock *tb_find_pc(struct uc_struct *uc, uintptr_t tc_ptr)
 {
     TCGContext *tcg_ctx = uc->tcg_ctx;
-    int m_min, m_max, m;
-    uintptr_t v;
-    TranslationBlock *tb;
+    struct tb_tc s = {0};
+    s.ptr = (void *)tc_ptr;
 
-    if (tcg_ctx->tb_ctx.nb_tbs <= 0) {
-        return NULL;
-    }
-    if (tc_ptr < (uintptr_t)tcg_ctx->code_gen_buffer ||
-        tc_ptr >= (uintptr_t)tcg_ctx->code_gen_ptr) {
-        return NULL;
-    }
-    /* binary search (cf Knuth) */
-    m_min = 0;
-    m_max = tcg_ctx->tb_ctx.nb_tbs - 1;
-    while (m_min <= m_max) {
-        m = (m_min + m_max) >> 1;
-        tb = tcg_ctx->tb_ctx.tbs[m];
-        v = (uintptr_t)tb->tc.ptr;
-        if (v == tc_ptr) {
-            return tb;
-        } else if (tc_ptr < v) {
-            m_max = m - 1;
-        } else {
-            m_min = m + 1;
-        }
-    }
-    return tcg_ctx->tb_ctx.tbs[m_max];
+    return g_tree_lookup(tcg_ctx->tb_ctx.tb_tree, &s);
 }
 
 #if !defined(CONFIG_USER_ONLY)

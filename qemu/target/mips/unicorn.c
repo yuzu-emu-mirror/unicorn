@@ -54,7 +54,7 @@ void mips_release(void *ctx)
     release_common(ctx);
     g_free(cpu->env.tlb);
     g_free(cpu->env.mvp);
-    g_free(tcg_ctx->tb_ctx.tbs);
+    g_tree_destroy(s->tb_ctx.tb_tree);
 }
 
 void mips_reg_reset(struct uc_struct *uc)

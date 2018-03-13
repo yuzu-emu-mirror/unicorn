@@ -31,10 +31,8 @@ typedef struct TBContext TBContext;
 
 struct TBContext {
 
-    TranslationBlock **tbs;
+    GTree *tb_tree;
     struct qht htable;
-    size_t tbs_size;
-    int nb_tbs;
 
     /* statistics */
     int tb_flush_count;

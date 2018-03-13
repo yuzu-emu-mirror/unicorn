@@ -35,7 +35,7 @@ void sparc_release(void *ctx)
 {
     TCGContext *tcg_ctx = (TCGContext *) ctx;
     release_common(ctx);
-    g_free(tcg_ctx->tb_ctx.tbs);
+    g_tree_destroy(s->tb_ctx.tb_tree);
 }
 
 void sparc_reg_reset(struct uc_struct *uc)
