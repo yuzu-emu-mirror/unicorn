@@ -231,8 +231,6 @@ struct TranslationBlock {
 #define CF_INVALID     0x80000 /* TB is stale. Setters must acquire tb_lock */
 
     struct tb_tc tc;
-    /* next matching tb for physical address. */
-    struct TranslationBlock *phys_hash_next;
     /* original tb when cflags has CF_NOCACHE */
     struct TranslationBlock *orig_tb;
     /* first and second physical page containing code. The lower bit

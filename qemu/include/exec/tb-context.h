@@ -21,9 +21,10 @@
 #define QEMU_TB_CONTEXT_H
 
 #include "qemu/thread.h"
+#include "qemu/qht.h"
 
-#define CODE_GEN_PHYS_HASH_BITS     15
-#define CODE_GEN_PHYS_HASH_SIZE     (1 << CODE_GEN_PHYS_HASH_BITS)
+#define CODE_GEN_HTABLE_BITS     15
+#define CODE_GEN_HTABLE_SIZE     (1 << CODE_GEN_HTABLE_BITS)
 
 typedef struct TranslationBlock TranslationBlock;
 typedef struct TBContext TBContext;
@@ -31,7 +32,7 @@ typedef struct TBContext TBContext;
 struct TBContext {
 
     TranslationBlock **tbs;
-    TranslationBlock *tb_phys_hash[CODE_GEN_PHYS_HASH_SIZE];
+    struct qht htable;
     size_t tbs_size;
     int nb_tbs;
 
