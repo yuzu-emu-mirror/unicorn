@@ -22,7 +22,7 @@ static inline void gen_tb_start(TCGContext *tcg_ctx, TranslationBlock *tb)
     tcg_temp_free_i32(tcg_ctx, flag);
 
 #if 0
-    if (!(tb->cflags & CF_USE_ICOUNT))
+    if (!(tb_cflags(tb) & CF_USE_ICOUNT))
         return;
     }
 
@@ -53,7 +53,7 @@ static inline void gen_tb_end(TCGContext *tcg_ctx, TranslationBlock *tb, int num
     tcg_gen_exit_tb(tcg_ctx, (uintptr_t)tb + TB_EXIT_REQUESTED);
 
 #if 0
-    if (tb->cflags & CF_USE_ICOUNT) {
+    if (tb_cflags(tb) & CF_USE_ICOUNT) {
         /* Update the num_insn immediate parameter now that we know
          * the actual insn count.  */
         tcg_set_insn_param(tcg_ctx->icount_start_insn, 1, num_insns);

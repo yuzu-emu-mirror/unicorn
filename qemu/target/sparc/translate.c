@@ -5963,7 +5963,7 @@ void gen_intermediate_code(CPUState *cs, TranslationBlock * tb)
         goto done_generating;
     }
 
-    max_insns = tb->cflags & CF_COUNT_MASK;
+    max_insns = tb_cflags(tb) & CF_COUNT_MASK;
     if (max_insns == 0) {
         max_insns = CF_COUNT_MASK;
     }
@@ -6013,9 +6013,12 @@ void gen_intermediate_code(CPUState *cs, TranslationBlock * tb)
             goto exit_gen_loop;
         }
 
-        //if (num_insns == max_insns && (tb->cflags & CF_LAST_IO)) {
-        //    gen_io_start();
-        //}
+        // Unicorn: if'd out
+#if 0
+        if (num_insns == max_insns && (tb_cflags(tb) & CF_LAST_IO)) {
+            gen_io_start();
+        }
+#endif
 
         // Unicorn: end address tells us to stop emulation
         if (dc->pc == dc->uc->addr_end) {
@@ -6052,9 +6055,12 @@ void gen_intermediate_code(CPUState *cs, TranslationBlock * tb)
         block_full = true;
 
  exit_gen_loop:
-    //if (tb->cflags & CF_LAST_IO) {
-    //    gen_io_end();
-    //}
+    // Unicorn: if'd out
+#if 0
+    if (tb_cflags(tb) & CF_LAST_IO) {
+        gen_io_end();
+    }
+#endif
     if (!dc->is_br) {
         if (dc->pc != DYNAMIC_PC &&
             (dc->npc != DYNAMIC_PC && dc->npc != JUMP_PC)) {

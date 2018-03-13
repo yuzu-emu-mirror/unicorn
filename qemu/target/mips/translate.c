@@ -5402,13 +5402,18 @@ static void gen_mfc0(DisasContext *ctx, TCGv arg, int reg, int sel)
         switch (sel) {
         case 0:
             /* Mark as an IO operation because we read the time.  */
-            //if (ctx->tb->cflags & CF_USE_ICOUNT) {
-            //   gen_io_start();
-            //}
+            // Unicorn: if'd out
+            #if 0
+            if (tb_cflags(ctx->tb) & CF_USE_ICOUNT) {
+               gen_io_start();
+            }
+            #endif
             gen_helper_mfc0_count(tcg_ctx, arg, tcg_ctx->cpu_env);
-            //if (ctx->tb->cflags & CF_USE_ICOUNT) {
-            //    gen_io_end();
-            //}
+            #if 0
+            if (tb_cflags(ctx->tb) & CF_USE_ICOUNT) {
+                gen_io_end();
+            }
+            #endif
             /* Break the TB to be able to take timer interrupts immediately
                after reading count. BS_STOP isn't sufficient, we need to ensure
                we break completely out of translated code.  */
@@ -5811,9 +5816,12 @@ static void gen_mtc0(DisasContext *ctx, TCGv arg, int reg, int sel)
     if (sel != 0)
         check_insn(ctx, ISA_MIPS32);
 
-    //if (ctx->tb->cflags & CF_USE_ICOUNT) {
-    //    gen_io_start();
-    //}
+    // Unicorn: if'd out
+#if 0
+    if (tb_cflags(ctx->tb) & CF_USE_ICOUNT) {
+        gen_io_start();
+    }
+#endif
 
     switch (reg) {
     case 0:
@@ -6477,14 +6485,15 @@ static void gen_mtc0(DisasContext *ctx, TCGv arg, int reg, int sel)
     }
     (void)rn; /* avoid a compiler warning */
     LOG_DISAS("mtc0 %s (reg %d sel %d)\n", rn, reg, sel);
+
     /* For simplicity assume that all writes can cause interrupts.  */
-    //if (ctx->tb->cflags & CF_USE_ICOUNT) {
-    //    gen_io_end();
-    //    /* BS_STOP isn't sufficient, we need to ensure we break out of
-    //     * translated code to check for pending interrupts.  */
-    //    gen_save_pc(ctx, ctx->pc + 4);
-    //    ctx->bstate = BS_EXCP;
-    //}
+    if (tb_cflags(ctx->tb) & CF_USE_ICOUNT) {
+        //gen_io_end();
+        /* BS_STOP isn't sufficient, we need to ensure we break out of
+         * translated code to check for pending interrupts.  */
+        gen_save_pc(ctx, ctx->pc + 4);
+        ctx->bstate = BS_EXCP;
+    }
     return;
 
 cp0_unimplemented:
@@ -6757,13 +6766,17 @@ static void gen_dmfc0(DisasContext *ctx, TCGv arg, int reg, int sel)
         switch (sel) {
         case 0:
             /* Mark as an IO operation because we read the time.  */
-            //if (ctx->tb->cflags & CF_USE_ICOUNT) {
-            //    gen_io_start();
-            //}
+            #if 0
+            if (tb_cflags(ctx->tb) & CF_USE_ICOUNT) {
+                gen_io_start();
+            }
+            #endif
             gen_helper_mfc0_count(tcg_ctx, arg, tcg_ctx->cpu_env);
-            //if (ctx->tb->cflags & CF_USE_ICOUNT) {
-            //    gen_io_end();
-            //}
+            #if 0
+            if (tb_cflags(ctx->tb) & CF_USE_ICOUNT) {
+                gen_io_end();
+            }
+            #endif
             /* Break the TB to be able to take timer interrupts immediately
                after reading count. BS_STOP isn't sufficient, we need to ensure
                we break completely out of translated code.  */
@@ -7152,9 +7165,12 @@ static void gen_dmtc0(DisasContext *ctx, TCGv arg, int reg, int sel)
     if (sel != 0)
         check_insn(ctx, ISA_MIPS64);
 
-    //if (ctx->tb->cflags & CF_USE_ICOUNT) {
-    //    gen_io_start();
-    //}
+    // Unicorn: if'd out
+#if 0
+    if (tb_cflags(ctx->tb) & CF_USE_ICOUNT) {
+        gen_io_start();
+    }
+#endif
 
     switch (reg) {
     case 0:
@@ -10860,13 +10876,13 @@ static void gen_rdhwr(DisasContext *ctx, int rt, int rd, int sel)
     case 2:
     // Unicorn: if'd out
 #if 0
-        if (ctx->tb->cflags & CF_USE_ICOUNT) {
+        if (tb_cflags(ctx->tb) & CF_USE_ICOUNT) {
             gen_io_start();
         }
 #endif
         gen_helper_rdhwr_cc(tcg_ctx, t0, tcg_ctx->cpu_env);
 #if 0
-        if (ctx->tb->cflags & CF_USE_ICOUNT) {
+        if (tb_cflags(ctx->tb) & CF_USE_ICOUNT) {
             gen_io_end();
         }
 #endif
@@ -20424,7 +20440,7 @@ void gen_intermediate_code(CPUState *cs, struct TranslationBlock *tb)
                                  MO_UNALN : MO_ALIGN;
 
     num_insns = 0;
-    max_insns = tb->cflags & CF_COUNT_MASK;
+    max_insns = tb_cflags(tb) & CF_COUNT_MASK;
     if (max_insns == 0) {
         max_insns = CF_COUNT_MASK;
     }
@@ -20474,10 +20490,12 @@ void gen_intermediate_code(CPUState *cs, struct TranslationBlock *tb)
             goto done_generating;
         }
 
-        // Unicorn: Commented out
-        //if (num_insns == max_insns && (tb->cflags & CF_LAST_IO)) {
-        //    gen_io_start();
-        //}
+        // Unicorn: If'd out
+#if 0
+        if (num_insns == max_insns && (tb_cflags(tb) & CF_LAST_IO)) {
+            gen_io_start();
+        }
+#endif
 
         // Unicorn: end address tells us to stop emulation
         if (ctx.pc == ctx.uc->addr_end) {
@@ -20572,9 +20590,12 @@ void gen_intermediate_code(CPUState *cs, struct TranslationBlock *tb)
         block_full = true;
     }
 
-    //if (tb->cflags & CF_LAST_IO) {
-    //    gen_io_end();
-    //}
+    // Unicorn: commented out
+#if 0
+    if (tb_cflags(tb) & CF_LAST_IO) {
+        gen_io_end();
+    }
+#endif
     if (cs->singlestep_enabled && ctx.bstate != BS_BRANCH) {
         save_cpu_state(&ctx, ctx.bstate != BS_EXCP);
         gen_helper_raise_exception_debug(tcg_ctx, tcg_ctx->cpu_env);
