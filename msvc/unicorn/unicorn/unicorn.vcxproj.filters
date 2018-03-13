@@ -502,6 +502,9 @@
     <ClInclude Include="..\..\..\qemu\include\qemu\osdep.h">
       <Filter>qemu\include\qemu</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\qemu\include\qemu\qht.h">
+      <Filter>qemu\include\qemu</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\qemu\include\qemu\queue.h">
       <Filter>qemu\include\qemu</Filter>
     </ClInclude>
