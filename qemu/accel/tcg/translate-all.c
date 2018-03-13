@@ -974,6 +974,15 @@ static void page_flush_tb(struct uc_struct *uc)
     }
 }
 
+static gboolean tb_host_size_iter(gpointer key, gpointer value, gpointer data)
+{
+    const TranslationBlock *tb = value;
+    size_t *size = data;
+
+    *size += tb->tc.size;
+    return false;
+}
+
 /* flush all the translation blocks */
 /* XXX: tb_flush is currently not thread safe */
 void tb_flush(CPUState *cpu)
@@ -983,11 +992,12 @@ void tb_flush(CPUState *cpu)
 
     if (DEBUG_TB_FLUSH_GATE) {
         size_t nb_tbs = g_tree_nnodes(tcg_ctx->tb_ctx.tb_tree);
+        size_t host_size = 0;
 
+        g_tree_foreach(tcg_ctx->tb_ctx.tb_tree, tb_host_size_iter, &host_size);
         printf("qemu: flush code_size=%td nb_tbs=%zu avg_tb_size=%zu\n",
                tcg_ctx->code_gen_ptr - tcg_ctx->code_gen_buffer, nb_tbs,
-               nb_tbs > 0 ?
-               (size_t)((tcg_ctx->code_gen_ptr - tcg_ctx->code_gen_buffer) / nb_tbs : 0));
+               nb_tbs > 0 ? host_size / nb_tbs : 0);
     }
     if ((unsigned long)((char*)tcg_ctx->code_gen_ptr - (char*)tcg_ctx->code_gen_buffer)
         > tcg_ctx->code_gen_buffer_size) {
