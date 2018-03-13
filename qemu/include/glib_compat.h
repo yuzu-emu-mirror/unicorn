@@ -36,6 +36,27 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define g_assert(expr) assert(expr)
 #define g_assert_not_reached() assert(0)
 
+#define g_assert_cmpstr(s1, cmp, s2)    do { const char *__s1 = (s1), *__s2 = (s2); \
+                                             if (strcmp (__s1, __s2) cmp 0) ; else \
+                                               assert(false); \
+                                           } while (0)
+#define g_assert_cmpint(n1, cmp, n2)    do { gint64 __n1 = (n1), __n2 = (n2); \
+                                             if (__n1 cmp __n2) ; else \
+                                               assert (false); \
+                                           } while (0)
+#define g_assert_cmpuint(n1, cmp, n2)   do { guint64 __n1 = (n1), __n2 = (n2); \
+                                             if (__n1 cmp __n2) ; else \
+                                               assert(false); \
+                                           } while (0)
+#define g_assert_cmphex(n1, cmp, n2)    do { guint64 __n1 = (n1), __n2 = (n2); \
+                                             if (__n1 cmp __n2) ; else \
+                                               assert(false); \
+                                           } while (0)
+#define g_assert_cmpfloat(n1,cmp,n2)    do { long double __n1 = (n1), __n2 = (n2); \
+                                             if (__n1 cmp __n2) ; else \
+                                               assert(false); \
+                                           } while (0)
+
 /* typedefs for glib related types that may still be referenced */
 typedef void* gpointer;
 typedef const void *gconstpointer;

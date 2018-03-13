@@ -49,6 +49,7 @@ static union MSVC_FLOAT_HACK __NAN = {{0x00, 0x00, 0xC0, 0x7F}};
 
 #define QEMU_GNUC_PREREQ(maj, min) 0
 
+#define QEMU_NOINLINE
 #define QEMU_NORETURN __declspec(noreturn)
 #define QEMU_UNUSED_VAR __pragma(warning(suppress:4100))	// unused variables only
 #define QEMU_UNUSED_FUNC
@@ -105,6 +106,7 @@ static union MSVC_FLOAT_HACK __NAN = {{0x00, 0x00, 0xC0, 0x7F}};
 # define QEMU_GNUC_PREREQ(maj, min) 0
 #endif
 
+#define QEMU_NOINLINE __attribute__((noinline))
 #define QEMU_NORETURN __attribute__ ((__noreturn__))
 
 #define QEMU_UNUSED_VAR __attribute__((unused))
