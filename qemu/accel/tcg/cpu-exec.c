@@ -101,7 +101,9 @@ static void cpu_exec_nocache(CPUState *cpu, int max_cycles,
     }
 
     tb = tb_gen_code(cpu, orig_tb->pc, orig_tb->cs_base, orig_tb->flags,
-                     max_cycles | CF_NOCACHE);
+                     max_cycles | CF_NOCACHE
+                         | 0
+                         | curr_cflags(cpu->uc));
     tb->orig_tb = orig_tb;
     /* execute the generated code */
     // Unicorn: commented out
@@ -117,6 +119,8 @@ struct tb_desc {
     CPUArchState *env;
     tb_page_addr_t phys_page1;
     uint32_t flags;
+    uint32_t cf_mask;
+    uint32_t trace_vcpu_dstate;
 };
 
 static bool tb_cmp(const void *p, const void *d)
@@ -127,7 +131,9 @@ static bool tb_cmp(const void *p, const void *d)
     if (tb->pc == desc->pc &&
         tb->page_addr[0] == desc->phys_page1 &&
         tb->cs_base == desc->cs_base &&
-        tb->flags == desc->flags) {
+        tb->flags == desc->flags &&
+        tb->trace_vcpu_dstate == desc->trace_vcpu_dstate &&
+        (tb_cflags(tb) & (CF_HASH_MASK | CF_INVALID)) == desc->cf_mask) {
         /* check next page if needed */
         if (tb->page_addr[1] == -1) {
             return true;
@@ -146,7 +152,8 @@ static bool tb_cmp(const void *p, const void *d)
 }
 
 TranslationBlock *tb_htable_lookup(CPUState *cpu, target_ulong pc,
-                                   target_ulong cs_base, uint32_t flags)
+                                   target_ulong cs_base, uint32_t flags,
+                                   uint32_t cf_mask)
 {
     TCGContext *tcg_ctx = cpu->uc->tcg_ctx;
     tb_page_addr_t phys_pc;
@@ -157,10 +164,12 @@ TranslationBlock *tb_htable_lookup(CPUState *cpu, target_ulong pc,
     desc.env = (CPUArchState *)cpu->env_ptr;
     desc.cs_base = cs_base;
     desc.flags = flags;
+    desc.cf_mask = cf_mask;
+    desc.trace_vcpu_dstate = 0;
     desc.pc = pc;
     phys_pc = get_page_addr_code(desc.env, pc);
     desc.phys_page1 = phys_pc & TARGET_PAGE_MASK;
-    h = tb_hash_func(phys_pc, pc, flags);
+    h = tb_hash_func(phys_pc, pc, flags, cf_mask, 0);
 
     return qht_lookup(&tcg_ctx->tb_ctx.htable, tb_cmp, &desc, h);
 }
@@ -208,8 +217,9 @@ static inline TranslationBlock *tb_find(CPUState *cpu,
     target_ulong cs_base, pc;
     uint32_t flags;
     bool acquired_tb_lock = false;
+    uint32_t cf_mask = curr_cflags(cpu->uc);
 
-    tb = tb_lookup__cpu_state(cpu, &pc, &cs_base, &flags);
+    tb = tb_lookup__cpu_state(cpu, &pc, &cs_base, &flags, cf_mask);
     if (tb == NULL) {
         /* mmap_lock is needed by tb_gen_code, and mmap_lock must be
          * taken outside tb_lock. As system emulation is currently
@@ -222,10 +232,10 @@ static inline TranslationBlock *tb_find(CPUState *cpu,
         /* There's a chance that our desired tb has been translated while
          * taking the locks so we check again inside the lock.
          */
-        tb = tb_htable_lookup(cpu, pc, cs_base, flags);
+        tb = tb_htable_lookup(cpu, pc, cs_base, flags, cf_mask);
         if (likely(tb == NULL)) {
             /* if no translated code available, then translate it now */
-            tb = tb_gen_code(cpu, pc, cs_base, flags, 0);
+            tb = tb_gen_code(cpu, pc, cs_base, flags, cf_mask);
         }
 
         mmap_unlock();
@@ -466,24 +476,21 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
 
 static void cpu_exec_step(struct uc_struct *uc, CPUState *cpu)
 {
-    CPUArchState *env = (CPUArchState *)cpu->env_ptr;
     TranslationBlock *tb;
     target_ulong cs_base, pc;
     uint32_t flags;
-
-    cpu_get_tb_cpu_state(env, &pc, &cs_base, &flags);
+    uint32_t cflags = 1 | CF_IGNORE_ICOUNT;
 
     if (sigsetjmp(cpu->jmp_env, 0) == 0) {
-        mmap_lock();
-        tb = tb_gen_code(cpu, pc, cs_base, flags,
-                         1 | CF_NOCACHE | CF_IGNORE_ICOUNT);
-        tb->orig_tb = NULL;
-        mmap_unlock();
-
-        /* execute the generated code */
-        cpu_tb_exec(cpu, tb);
-        tb_phys_invalidate(uc, tb, -1);
-        tb_free(uc, tb);
+        tb = tb_lookup__cpu_state(cpu, &pc, &cs_base, &flags,
+                                  cflags & CF_HASH_MASK);
+        if (tb == NULL) {
+            mmap_lock();
+            //tb_lock();
+            tb = tb_gen_code(cpu, pc, cs_base, flags, cflags);
+            //tb_unlock();
+            mmap_unlock();
+        }
     } else {
         /* We may have exited due to another problem here, so we need
          * to reset any tb_locks we may have taken but didn't release.
