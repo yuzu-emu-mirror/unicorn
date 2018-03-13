@@ -569,8 +569,9 @@ uint64_t HELPER(crc32c_64)(uint64_t acc, uint64_t val, uint32_t bytes)
 }
 
 /* Returns 0 on success; 1 otherwise.  */
-uint64_t HELPER(paired_cmpxchg64_le)(CPUARMState *env, uint64_t addr,
-                                     uint64_t new_lo, uint64_t new_hi)
+static uint64_t do_paired_cmpxchg64_le(CPUARMState *env, uint64_t addr,
+                                       uint64_t new_lo, uint64_t new_hi,
+                                       bool parallel)
 {
     uintptr_t ra = GETPC();
     Int128 oldv, cmpv, newv;
@@ -582,7 +583,7 @@ uint64_t HELPER(paired_cmpxchg64_le)(CPUARMState *env, uint64_t addr,
     cmpv = int128_make128(env->exclusive_high, env->exclusive_val);
     newv = int128_make128(new_hi, new_lo);
 
-    if (env->uc->parallel_cpus) {
+    if (parallel) {
 #ifndef CONFIG_ATOMIC128
         cpu_loop_exit_atomic(ENV_GET_CPU(env), ra);
 #else
@@ -630,8 +631,21 @@ uint64_t HELPER(paired_cmpxchg64_le)(CPUARMState *env, uint64_t addr,
     return !success;
 }
 
-uint64_t HELPER(paired_cmpxchg64_be)(CPUARMState *env, uint64_t addr,
-                                     uint64_t new_lo, uint64_t new_hi)
+uint64_t HELPER(paired_cmpxchg64_le)(CPUARMState *env, uint64_t addr,
+                                              uint64_t new_lo, uint64_t new_hi)
+{
+    return do_paired_cmpxchg64_le(env, addr, new_lo, new_hi, false);
+}
+
+uint64_t HELPER(paired_cmpxchg64_le_parallel)(CPUARMState *env, uint64_t addr,
+                                              uint64_t new_lo, uint64_t new_hi)
+{
+    return do_paired_cmpxchg64_le(env, addr, new_lo, new_hi, true);
+}
+
+static uint64_t do_paired_cmpxchg64_be(CPUARMState *env, uint64_t addr,
+                                       uint64_t new_lo, uint64_t new_hi,
+                                       bool parallel)
 {
     uintptr_t ra = GETPC();
     Int128 oldv, cmpv, newv;
@@ -640,7 +654,7 @@ uint64_t HELPER(paired_cmpxchg64_be)(CPUARMState *env, uint64_t addr,
     cmpv = int128_make128(env->exclusive_val, env->exclusive_high);
     newv = int128_make128(new_lo, new_hi);
 
-    if (env->uc->parallel_cpus) {
+    if (parallel) {
 #ifndef CONFIG_ATOMIC128
         cpu_loop_exit_atomic(ENV_GET_CPU(env), ra);
 #else
@@ -686,6 +700,18 @@ uint64_t HELPER(paired_cmpxchg64_be)(CPUARMState *env, uint64_t addr,
     }
 
     return !success;
+}
+
+uint64_t HELPER(paired_cmpxchg64_be)(CPUARMState *env, uint64_t addr,
+                                     uint64_t new_lo, uint64_t new_hi)
+{
+    return do_paired_cmpxchg64_be(env, addr, new_lo, new_hi, false);
+}
+
+uint64_t HELPER(paired_cmpxchg64_be_parallel)(CPUARMState *env, uint64_t addr,
+                                     uint64_t new_lo, uint64_t new_hi)
+{
+    return do_paired_cmpxchg64_be(env, addr, new_lo, new_hi, true);
 }
 
 /*
