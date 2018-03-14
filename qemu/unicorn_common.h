@@ -59,19 +59,13 @@ static inline void free_tcg_temp_names(TCGContext *s)
 #endif
 }
 
-/** Freeing common resources */
-static void release_common(void *t)
+static inline void free_tcg_context(TCGContext *s)
 {
-    TCGPool *po, *to;
-    TCGContext *s = (TCGContext *)t;
-    struct uc_struct *uc = s->uc;
-
-    // Clean TCG.
     TCGOpDef* def = &s->tcg_op_defs[0];
+    TCGPool *po, *to;
+
     g_free(def->args_ct);
     g_free(def->sorted_args);
-    g_tree_destroy(uc->tb_ctx.tb_tree);
-    qht_destroy(&uc->tb_ctx.htable);
     g_free(s->tcg_op_defs);
 
     for (po = s->pool_first; po; po = to) {
@@ -79,20 +73,46 @@ static void release_common(void *t)
         g_free(po);
     }
     tcg_pool_reset(s);
+
     g_hash_table_destroy(s->helpers);
+    free_tcg_temp_names(s);
+    g_free(s);
+}
+
+static inline void free_tcg_contexts(struct uc_struct *uc)
+{
+    int i;
+    TCGContext **tcg_ctxs = uc->tcg_ctxs;
+
+    for (i = 0; i < uc->n_tcg_ctxs; i++) {
+        free_tcg_context(tcg_ctxs[i]);
+    }
+
+    g_free(tcg_ctxs);
+}
+
+/** Freeing common resources */
+static void release_common(void *t)
+{
+    TCGContext *s = (TCGContext *)t;
+    struct uc_struct *uc = s->uc;
+
+    // Clean TCG.
+    free_tcg_contexts(uc);
+    g_tree_destroy(uc->tb_ctx.tb_tree);
+    qht_destroy(&uc->tb_ctx.htable);
 
     // Destory flat view hash table
-    g_hash_table_destroy(s->uc->flat_views);
-    unicorn_free_empty_flat_view(s->uc);
+    g_hash_table_destroy(uc->flat_views);
+    unicorn_free_empty_flat_view(uc);
 
     // TODO(danghvu): these function is not available outside qemu
     // so we keep them here instead of outside uc_close.
-    free_address_spaces(s->uc);
-    memory_free(s->uc);
-    tb_cleanup(s->uc);
-    free_code_gen_buffer(s->uc);
-    free_machine_class_name(s->uc);
-    free_tcg_temp_names(s);
+    free_address_spaces(uc);
+    memory_free(uc);
+    tb_cleanup(uc);
+    free_code_gen_buffer(uc);
+    free_machine_class_name(uc);
 }
 
 static inline void uc_common_init(struct uc_struct* uc)

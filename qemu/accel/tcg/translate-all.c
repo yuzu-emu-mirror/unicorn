@@ -836,6 +836,19 @@ void tcg_exec_init(struct uc_struct *uc, unsigned long tb_size)
        initialize the prologue now.  */
     tcg_prologue_init(tcg_ctx);
 #endif
+
+    /*
+     * Initialize TCG regions--once. Now is a good time, because:
+     * (1) TCG's init context, prologue and target globals have been set up.
+     * (2) qemu_tcg_mttcg_enabled() works now (TCG init code runs before the
+     *     -accel flag is processed, so the check doesn't work then).
+     */
+    if (!uc->tcg_region_inited) {
+        uc->tcg_region_inited = 1;
+        tcg_region_init(uc);
+    }
+
+    tcg_register_thread(uc);
 }
 
 bool tcg_enabled(struct uc_struct *uc)

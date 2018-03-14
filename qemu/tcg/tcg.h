@@ -634,13 +634,14 @@ QEMU_BUILD_BUG_ON(NB_OPS > (1 << 8));
 
 /* pool based memory allocation */
 
-/* tb_lock must be held for tcg_malloc_internal. */
+/* user-mode: tb_lock must be held for tcg_malloc_internal. */
 void *tcg_malloc_internal(TCGContext *s, int size);
 void tcg_pool_reset(TCGContext *s);
 TranslationBlock *tcg_tb_alloc(TCGContext *s);
 
 void tcg_context_init(struct uc_struct *uc, TCGContext *s);
 void tcg_context_free(void *s);   // free memory allocated for @s
+void tcg_register_thread(struct uc_struct *uc);
 void tcg_prologue_init(TCGContext *s);
 void tcg_func_start(TCGContext *s);
 
@@ -1148,7 +1149,7 @@ void tcg_region_reset_all(struct uc_struct *uc);
 size_t tcg_code_size(struct uc_struct *uc);
 size_t tcg_code_capacity(struct uc_struct *uc);
 
-/* Called with tb_lock held.  */
+/* user-mode: Called with tb_lock held.  */
 static inline void *tcg_malloc(TCGContext *s, int size)
 {
     uint8_t *ptr, *ptr_end;

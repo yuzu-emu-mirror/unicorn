@@ -2886,6 +2886,7 @@
 #define tcg_reg_sync tcg_reg_sync_sparc
 #define tcg_region_init tcg_region_init_sparc
 #define tcg_region_reset_all tcg_region_reset_all_sparc
+#define tcg_register_thread tcg_register_thread_sparc
 #define tcg_set_frame tcg_set_frame_sparc
 #define tcg_set_nop tcg_set_nop_sparc
 #define tcg_swap_cond tcg_swap_cond_sparc

@@ -2886,6 +2886,7 @@
 #define tcg_reg_sync tcg_reg_sync_mipsel
 #define tcg_region_init tcg_region_init_mipsel
 #define tcg_region_reset_all tcg_region_reset_all_mipsel
+#define tcg_register_thread tcg_register_thread_mipsel
 #define tcg_set_frame tcg_set_frame_mipsel
 #define tcg_set_nop tcg_set_nop_mipsel
 #define tcg_swap_cond tcg_swap_cond_mipsel

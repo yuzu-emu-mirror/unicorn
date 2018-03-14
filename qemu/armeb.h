@@ -2886,6 +2886,7 @@
 #define tcg_reg_sync tcg_reg_sync_armeb
 #define tcg_region_init tcg_region_init_armeb
 #define tcg_region_reset_all tcg_region_reset_all_armeb
+#define tcg_register_thread tcg_register_thread_armeb
 #define tcg_set_frame tcg_set_frame_armeb
 #define tcg_set_nop tcg_set_nop_armeb
 #define tcg_swap_cond tcg_swap_cond_armeb

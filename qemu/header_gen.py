@@ -2892,6 +2892,7 @@ symbols = (
     'tcg_reg_sync',
     'tcg_region_init',
     'tcg_region_reset_all',
+    'tcg_register_thread',
     'tcg_set_frame',
     'tcg_set_nop',
     'tcg_swap_cond',

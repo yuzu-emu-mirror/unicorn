@@ -2886,6 +2886,7 @@
 #define tcg_reg_sync tcg_reg_sync_powerpc
 #define tcg_region_init tcg_region_init_powerpc
 #define tcg_region_reset_all tcg_region_reset_all_powerpc
+#define tcg_register_thread tcg_register_thread_powerpc
 #define tcg_set_frame tcg_set_frame_powerpc
 #define tcg_set_nop tcg_set_nop_powerpc
 #define tcg_swap_cond tcg_swap_cond_powerpc
