@@ -2799,8 +2799,6 @@
 #define tcg_global_mem_new_i32 tcg_global_mem_new_i32_sparc
 #define tcg_global_mem_new_i64 tcg_global_mem_new_i64_sparc
 #define tcg_global_mem_new_internal tcg_global_mem_new_internal_sparc
-#define tcg_global_reg_new_i32 tcg_global_reg_new_i32_sparc
-#define tcg_global_reg_new_i64 tcg_global_reg_new_i64_sparc
 #define tcg_global_reg_new_internal tcg_global_reg_new_internal_sparc
 #define tcg_handle_interrupt tcg_handle_interrupt_sparc
 #define tcg_init tcg_init_sparc

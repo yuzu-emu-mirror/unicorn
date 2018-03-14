@@ -228,6 +228,7 @@ struct uc_struct {
     void *tcg_ctxs;         // actually "TCGContext **tcg_ctxs"
     unsigned int n_tcg_ctxs;
     struct tcg_region_state region;
+    void *cpu_env;          // actually "TCGv_env cpu_env"
 
     /* memory.c */
     unsigned memory_region_transaction_depth;

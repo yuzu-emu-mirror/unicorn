@@ -2799,8 +2799,6 @@
 #define tcg_global_mem_new_i32 tcg_global_mem_new_i32_mips64
 #define tcg_global_mem_new_i64 tcg_global_mem_new_i64_mips64
 #define tcg_global_mem_new_internal tcg_global_mem_new_internal_mips64
-#define tcg_global_reg_new_i32 tcg_global_reg_new_i32_mips64
-#define tcg_global_reg_new_i64 tcg_global_reg_new_i64_mips64
 #define tcg_global_reg_new_internal tcg_global_reg_new_internal_mips64
 #define tcg_handle_interrupt tcg_handle_interrupt_mips64
 #define tcg_init tcg_init_mips64

@@ -2552,7 +2552,7 @@ void tcg_gen_lookup_and_goto_ptr(TCGContext *s)
 {
     if (TCG_TARGET_HAS_goto_ptr && !qemu_loglevel_mask(CPU_LOG_TB_NOCHAIN)) {
         TCGv_ptr ptr = tcg_temp_new_ptr(s);
-        gen_helper_lookup_tb_ptr(s, ptr, s->tcg_env);
+        gen_helper_lookup_tb_ptr(s, ptr, s->uc->cpu_env);
         tcg_gen_op1i(s, INDEX_op_goto_ptr, tcgv_ptr_arg(s, ptr));
         tcg_temp_free_ptr(s, ptr);
     } else {
@@ -2631,7 +2631,7 @@ void check_exit_request(TCGContext *tcg_ctx)
     TCGv_i32 flag;
 
     flag = tcg_temp_new_i32(tcg_ctx);
-    tcg_gen_ld_i32(tcg_ctx, flag, tcg_ctx->cpu_env,
+    tcg_gen_ld_i32(tcg_ctx, flag, tcg_ctx->uc->cpu_env,
             offsetof(CPUState, tcg_exit_req) - ENV_OFFSET);
     tcg_gen_brcondi_i32(tcg_ctx, TCG_COND_NE, flag, 0, tcg_ctx->exitreq_label);
     tcg_temp_free_i32(tcg_ctx, flag);
@@ -2845,11 +2845,11 @@ void tcg_gen_atomic_cmpxchg_i32(TCGContext *s,
 #ifdef CONFIG_SOFTMMU
         {
             TCGv_i32 oi = tcg_const_i32(s, make_memop_idx(memop & ~MO_SIGN, idx));
-            gen(s, retv, s->tcg_env, addr, cmpv, newv, oi);
+            gen(s, retv, s->uc->cpu_env, addr, cmpv, newv, oi);
             tcg_temp_free_i32(s, oi);
         }
 #else
-        gen(s, retv, s->tcg_env, addr, cmpv, newv);
+        gen(s, retv, s->uc->cpu_env, addr, cmpv, newv);
 #endif
 
         if (memop & MO_SIGN) {
@@ -2891,14 +2891,14 @@ void tcg_gen_atomic_cmpxchg_i64(TCGContext *s,
 #ifdef CONFIG_SOFTMMU
         {
             TCGv_i32 oi = tcg_const_i32(s, make_memop_idx(memop, idx));
-            gen(s, retv, s->tcg_env, addr, cmpv, newv, oi);
+            gen(s, retv, s->uc->cpu_env, addr, cmpv, newv, oi);
             tcg_temp_free_i32(s, oi);
         }
 #else
-        gen(s, retv, s->tcg_env, addr, cmpv, newv);
+        gen(s, retv, s->uc->cpu_env, addr, cmpv, newv);
 #endif
 #else
-        gen_helper_exit_atomic(s, s->tcg_env);
+        gen_helper_exit_atomic(s, s->uc->cpu_env);
         /* Produce a result, so that we have a well-formed opcode stream
            with respect to uses of the result in the (dead) code following.  */
         tcg_gen_movi_i64(s, retv, 0);
@@ -2956,11 +2956,11 @@ static void do_atomic_op_i32(TCGContext *s,
 #ifdef CONFIG_SOFTMMU
     {
         TCGv_i32 oi = tcg_const_i32(s, make_memop_idx(memop & ~MO_SIGN, idx));
-        gen(s, ret, s->tcg_env, addr, val, oi);
+        gen(s, ret, s->uc->cpu_env, addr, val, oi);
         tcg_temp_free_i32(s, oi);
     }
 #else
-    gen(s, ret, s->tcg_env, addr, val);
+    gen(s, ret, s->uc->cpu_env, addr, val);
 #endif
 
     if (memop & MO_SIGN) {
@@ -3003,14 +3003,14 @@ static void do_atomic_op_i64(TCGContext *s,
 #ifdef CONFIG_SOFTMMU
         {
             TCGv_i32 oi = tcg_const_i32(s, make_memop_idx(memop & ~MO_SIGN, idx));
-            gen(s, ret, s->tcg_env, addr, val, oi);
+            gen(s, ret, s->uc->cpu_env, addr, val, oi);
             tcg_temp_free_i32(s, oi);
         }
 #else
-        gen(s, ret, s->tcg_env, addr, val);
+        gen(s, ret, s->uc->cpu_env, addr, val);
 #endif
 #else
-        gen_helper_exit_atomic(s, s->tcg_env);
+        gen_helper_exit_atomic(s, s->uc->cpu_env);
         /* Produce a result, so that we have a well-formed opcode stream
            with respect to uses of the result in the (dead) code following.  */
         tcg_gen_movi_i64(s, ret, 0);

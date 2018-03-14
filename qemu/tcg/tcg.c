@@ -647,6 +647,8 @@ static const TCGHelperInfo all_helpers[] = {
 };
 
 static void process_op_defs(TCGContext *s);
+static TCGTemp *tcg_global_reg_new_internal(TCGContext *s, TCGType type,
+                                            TCGReg reg, const char *name);
 
 void tcg_context_init(struct uc_struct *uc, TCGContext *s)
 {
@@ -655,6 +657,7 @@ void tcg_context_init(struct uc_struct *uc, TCGContext *s)
     TCGArgConstraint *args_ct;
     int *sorted_args;
     GHashTable *helper_table;
+    TCGTemp *ts;
 
     memset(s, 0, sizeof(*s));
     s->nb_globals = 0;
@@ -726,6 +729,10 @@ void tcg_context_init(struct uc_struct *uc, TCGContext *s)
     //uc->tcg_ctxs = g_new(TCGContext *, max_cpus);
     uc->tcg_ctxs = g_new(TCGContext *, 1);
 #endif
+
+    tcg_debug_assert(!tcg_regset_test_reg(s->reserved_regs, TCG_AREG0));
+    ts = tcg_global_reg_new_internal(s, TCG_TYPE_PTR, TCG_AREG0, "env");
+    uc->cpu_env = temp_tcgv_ptr(s, ts);
 }
 
 /*
@@ -903,29 +910,6 @@ void tcg_set_frame(TCGContext *s, TCGReg reg, intptr_t start, intptr_t size)
     s->frame_end = start + size;
     s->frame_temp
         = tcg_global_reg_new_internal(s, TCG_TYPE_PTR, reg, "_frame");
-}
-
-TCGv_i32 tcg_global_reg_new_i32(TCGContext *s, TCGReg reg, const char *name)
-{
-    TCGTemp *t;
-
-    if (tcg_regset_test_reg(s->reserved_regs, reg)) {
-        tcg_abort();
-    }
-    t = tcg_global_reg_new_internal(s, TCG_TYPE_I32, reg, name);
-    return temp_tcgv_i32(s, t);
-}
-
-TCGv_i64 tcg_global_reg_new_i64(TCGContext *s, TCGReg reg, const char *name)
-{
-    TCGTemp *t;
-
-    if (tcg_regset_test_reg(s->reserved_regs, reg)) {
-        tcg_abort();
-    }
-
-    t = tcg_global_reg_new_internal(s, TCG_TYPE_I64, reg, name);
-    return temp_tcgv_i64(s, t);
 }
 
 TCGTemp *tcg_global_mem_new_internal(TCGContext *s, TCGType type, TCGv_ptr base,

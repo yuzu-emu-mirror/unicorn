@@ -783,7 +783,6 @@ struct TCGContext {
 
     /* Track which vCPU triggers events */
     CPUState *cpu;                      /* *_trans */
-    TCGv_env tcg_env;                   /* *_exec  */
 
     /* These structures are private to tcg-target.inc.c.  */
 #ifdef TCG_TARGET_NEED_LDST_LABELS
@@ -812,7 +811,6 @@ struct TCGContext {
     // Unicorn engine variables
     struct uc_struct *uc;
     /* qemu/target-i386/translate.c: global register indexes */
-    TCGv_env cpu_env;
     TCGv_i32 cpu_cc_op;
     TCGv cpu_regs[16]; // 16 GRP for X86-64
     TCGv cpu_seg_base[6];
@@ -1047,9 +1045,6 @@ static inline bool tcg_op_buf_full(TCGContext *tcg_ctx)
 TCGTemp *tcg_global_mem_new_internal(TCGContext *s, TCGType type, TCGv_ptr base,
                                      intptr_t offset, const char *name);
 
-TCGv_i32 tcg_global_reg_new_i32(TCGContext *s, TCGReg reg, const char *name);
-TCGv_i64 tcg_global_reg_new_i64(TCGContext *s, TCGReg reg, const char *name);
-
 TCGv_i32 tcg_temp_new_internal_i32(TCGContext *s, int temp_local);
 TCGv_i64 tcg_temp_new_internal_i64(TCGContext *s, int temp_local);
 TCGv_vec tcg_temp_new_vec(TCGContext *s, TCGType type);
@@ -1113,8 +1108,6 @@ static inline TCGv_ptr TCGV_NAT_TO_PTR(TCGv_i32 n) { return (TCGv_ptr)n; }
 static inline TCGv_i32 TCGV_PTR_TO_NAT(TCGv_ptr n) { return (TCGv_i32)n; }
 
 #define tcg_const_ptr(t, V) TCGV_NAT_TO_PTR(tcg_const_i32(t, (intptr_t)(V)))
-#define tcg_global_reg_new_ptr(U, R, N) \
-    TCGV_NAT_TO_PTR(tcg_global_reg_new_i32(U, (R), (N)))
 #define tcg_global_mem_new_ptr(t, R, O, N) \
     TCGV_NAT_TO_PTR(tcg_global_mem_new_i32(t, (R), (O), (N)))
 #define tcg_temp_new_ptr(s) TCGV_NAT_TO_PTR(tcg_temp_new_i32(s))
@@ -1124,8 +1117,6 @@ static inline TCGv_ptr TCGV_NAT_TO_PTR(TCGv_i64 n) { return (TCGv_ptr)n; }
 static inline TCGv_i64 TCGV_PTR_TO_NAT(TCGv_ptr n) { return (TCGv_i64)n; }
 
 #define tcg_const_ptr(t, V) TCGV_NAT_TO_PTR(tcg_const_i64(t, (intptr_t)(V)))
-#define tcg_global_reg_new_ptr(U, R, N) \
-    TCGV_NAT_TO_PTR(tcg_global_reg_new_i64(U, (R), (N)))
 #define tcg_global_mem_new_ptr(t, R, O, N) \
     TCGV_NAT_TO_PTR(tcg_global_mem_new_i64(t, (R), (O), (N)))
 #define tcg_temp_new_ptr(s) TCGV_NAT_TO_PTR(tcg_temp_new_i64(s))

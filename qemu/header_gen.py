@@ -2805,8 +2805,6 @@ symbols = (
     'tcg_global_mem_new_i32',
     'tcg_global_mem_new_i64',
     'tcg_global_mem_new_internal',
-    'tcg_global_reg_new_i32',
-    'tcg_global_reg_new_i64',
     'tcg_global_reg_new_internal',
     'tcg_handle_interrupt',
     'tcg_init',
