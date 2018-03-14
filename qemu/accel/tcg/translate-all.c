@@ -169,7 +169,7 @@ static void cpu_gen_init(struct uc_struct *uc)
 {
     uc->tcg_init_ctx = g_malloc0(sizeof(TCGContext));;
 
-    tcg_context_init(uc->tcg_init_ctx);
+    tcg_context_init(uc, uc->tcg_init_ctx);
 }
 
 static void tb_clean_internal(struct uc_struct *uc, int i, void** lp)
@@ -880,7 +880,6 @@ void tcg_exec_init(struct uc_struct *uc, unsigned long tb_size)
     TCGContext *tcg_ctx;
 
     cpu_gen_init(uc);
-    uc->tcg_ctx = uc->tcg_init_ctx;
     tcg_ctx = uc->tcg_ctx;
     tcg_ctx->uc = uc;
     page_init(uc);

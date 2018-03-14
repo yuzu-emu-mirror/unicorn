@@ -325,7 +325,7 @@ static const TCGHelperInfo all_helpers[] = {
 
 static void process_op_defs(TCGContext *s);
 
-void tcg_context_init(TCGContext *s)
+void tcg_context_init(struct uc_struct *uc, TCGContext *s)
 {
     int op, total_args, n, i;
     TCGOpDef *def;
@@ -387,6 +387,10 @@ void tcg_context_init(TCGContext *s)
     for (; i < ARRAY_SIZE(tcg_target_reg_alloc_order); ++i) {
         s->indirect_reg_alloc_order[i] = tcg_target_reg_alloc_order[i];
     }
+
+    uc->tcg_ctx = s;
+    uc->tcg_ctxs = &uc->tcg_ctx;
+    uc->n_tcg_ctxs = 1;
 }
 
 /*
