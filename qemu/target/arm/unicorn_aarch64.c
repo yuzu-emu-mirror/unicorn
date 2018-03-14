@@ -27,7 +27,6 @@ void arm64_release(void* ctx)
     struct uc_struct* uc = s->uc;
     ARMCPU* cpu = ARM_CPU(uc, uc->cpu);
 
-    g_tree_destroy(s->tb_ctx.tb_tree);
     g_free(cpu->cpreg_indexes);
     g_free(cpu->cpreg_values);
     g_free(cpu->cpreg_vmstate_indexes);

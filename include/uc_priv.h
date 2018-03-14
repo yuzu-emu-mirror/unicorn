@@ -9,6 +9,7 @@
 
 #include "qemu.h"
 #include "exec/ramlist.h"
+#include "exec/tb-context.h"
 #include "unicorn/unicorn.h"
 #include "list.h"
 
@@ -217,6 +218,7 @@ struct uc_struct {
 
     /* code generation context */
     void *tcg_ctx;  // for "TCGContext tcg_ctx" in qemu/translate-all.c
+    TBContext tb_ctx;
     bool parallel_cpus; // for "bool parallel_cpus" in qemu/translate-all.c
 
     /* memory.c */

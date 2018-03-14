@@ -29,7 +29,6 @@ void arm_release(void* ctx)
     ARMCPU* cpu = ARM_CPU(uc, uc->cpu);
     CPUArchState *env = &cpu->env;
 
-    g_tree_destroy(s->tb_ctx.tb_tree);
     g_free(cpu->cpreg_indexes);
     g_free(cpu->cpreg_values);
     g_free(cpu->cpreg_vmstate_indexes);

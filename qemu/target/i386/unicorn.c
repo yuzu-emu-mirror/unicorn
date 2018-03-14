@@ -53,12 +53,7 @@ void x86_release(void *ctx);
 
 void x86_release(void *ctx)
 {
-    TCGContext *s = (TCGContext *) ctx;
-
     release_common(ctx);
-
-    // arch specific
-    g_tree_destroy(s->tb_ctx.tb_tree);
 }
 
 void x86_reg_reset(struct uc_struct *uc)

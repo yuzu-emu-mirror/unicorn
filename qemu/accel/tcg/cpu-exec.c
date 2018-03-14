@@ -156,7 +156,6 @@ TranslationBlock *tb_htable_lookup(CPUState *cpu, target_ulong pc,
                                    target_ulong cs_base, uint32_t flags,
                                    uint32_t cf_mask)
 {
-    TCGContext *tcg_ctx = cpu->uc->tcg_ctx;
     tb_page_addr_t phys_pc;
     struct tb_desc desc;
     uint32_t h;
@@ -172,7 +171,7 @@ TranslationBlock *tb_htable_lookup(CPUState *cpu, target_ulong pc,
     desc.phys_page1 = phys_pc & TARGET_PAGE_MASK;
     h = tb_hash_func(phys_pc, pc, flags, cf_mask, 0);
 
-    return qht_lookup(&tcg_ctx->tb_ctx.htable, tb_cmp, &desc, h);
+    return qht_lookup(&cpu->uc->tb_ctx.htable, tb_cmp, &desc, h);
 }
 
 void tb_set_jmp_target(TranslationBlock *tb, int n, uintptr_t addr)

@@ -64,12 +64,14 @@ static void release_common(void *t)
 {
     TCGPool *po, *to;
     TCGContext *s = (TCGContext *)t;
+    struct uc_struct *uc = s->uc;
 
     // Clean TCG.
     TCGOpDef* def = &s->tcg_op_defs[0];
     g_free(def->args_ct);
     g_free(def->sorted_args);
-    qht_destroy(&s->tb_ctx.htable);
+    g_tree_destroy(uc->tb_ctx.tb_tree);
+    qht_destroy(&uc->tb_ctx.htable);
     g_free(s->tcg_op_defs);
 
     for (po = s->pool_first; po; po = to) {

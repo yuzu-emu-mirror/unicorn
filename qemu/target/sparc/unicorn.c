@@ -33,9 +33,7 @@ static void sparc_set_pc(struct uc_struct *uc, uint64_t address)
 void sparc_release(void *ctx);
 void sparc_release(void *ctx)
 {
-    TCGContext *tcg_ctx = (TCGContext *) ctx;
     release_common(ctx);
-    g_tree_destroy(s->tb_ctx.tb_tree);
 }
 
 void sparc_reg_reset(struct uc_struct *uc)

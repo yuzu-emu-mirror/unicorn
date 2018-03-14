@@ -22,10 +22,7 @@ static void m68k_set_pc(struct uc_struct *uc, uint64_t address)
 void m68k_release(void* ctx);
 void m68k_release(void* ctx)
 {
-    TCGContext *tcg_ctx = ctx;;
-
     release_common(ctx);
-    g_tree_destroy(s->tb_ctx.tb_tree);
 }
 
 void m68k_reg_reset(struct uc_struct *uc)

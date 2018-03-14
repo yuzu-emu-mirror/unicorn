@@ -857,23 +857,18 @@ static inline void code_gen_alloc(struct uc_struct *uc, size_t tb_size)
         exit(1);
     }
 
-    // Unicorn: Commented out
-    //qemu_madvise(tcg_ctx->code_gen_buffer, tcg_ctx->code_gen_buffer_size,
-    //             QEMU_MADV_HUGEPAGE);
-
     /* Estimate a good size for the number of TBs we can support.  We
        still haven't deducted the prologue from the buffer size here,
        but that's minimal and won't affect the estimate much.  */
     /* size this conservatively -- realloc later if needed */
-    tcg_ctx->tb_ctx.tb_tree = g_tree_new(tb_tc_cmp);
+    uc->tb_ctx.tb_tree = g_tree_new(tb_tc_cmp);
 }
 
 static void tb_htable_init(struct uc_struct *uc)
 {
     unsigned int mode = QHT_MODE_AUTO_RESIZE;
-    TCGContext *tcg_ctx = uc->tcg_ctx;
 
-    qht_init(&tcg_ctx->tb_ctx.htable, CODE_GEN_HTABLE_SIZE, mode);
+    qht_init(&uc->tb_ctx.htable, CODE_GEN_HTABLE_SIZE, mode);
 }
 
 /* Must be called before using the QEMU cpus. 'tb_size' is the size
@@ -923,9 +918,7 @@ static TranslationBlock *tb_alloc(struct uc_struct *uc, target_ulong pc)
 /* Called with tb_lock held.  */
 void tb_remove(struct uc_struct *uc, TranslationBlock *tb)
 {
-    TCGContext *tcg_ctx = uc->tcg_ctx;
-
-    g_tree_remove(tcg_ctx->tb_ctx.tb_tree, &tb->tc);
+    g_tree_remove(uc->tb_ctx.tb_tree, &tb->tc);
 }
 
 static inline void invalidate_page_bitmap(PageDesc *p)
@@ -991,10 +984,10 @@ void tb_flush(CPUState *cpu)
     TCGContext *tcg_ctx = uc->tcg_ctx;
 
     if (DEBUG_TB_FLUSH_GATE) {
-        size_t nb_tbs = g_tree_nnodes(tcg_ctx->tb_ctx.tb_tree);
+        size_t nb_tbs = g_tree_nnodes(uc->tb_ctx.tb_tree);
         size_t host_size = 0;
 
-        g_tree_foreach(tcg_ctx->tb_ctx.tb_tree, tb_host_size_iter, &host_size);
+        g_tree_foreach(uc->tb_ctx.tb_tree, tb_host_size_iter, &host_size);
         printf("qemu: flush code_size=%td nb_tbs=%zu avg_tb_size=%zu\n",
                tcg_ctx->code_gen_ptr - tcg_ctx->code_gen_buffer, nb_tbs,
                nb_tbs > 0 ? host_size / nb_tbs : 0);
@@ -1008,16 +1001,16 @@ void tb_flush(CPUState *cpu)
     atomic_mb_set(&cpu->tb_flushed, true);
 
     /* Increment the refcount first so that destroy acts as a reset */
-    g_tree_ref(tcg_ctx->tb_ctx.tb_tree);
-    g_tree_destroy(tcg_ctx->tb_ctx.tb_tree);
+    g_tree_ref(uc->tb_ctx.tb_tree);
+    g_tree_destroy(uc->tb_ctx.tb_tree);
 
-    qht_reset_size(&tcg_ctx->tb_ctx.htable, CODE_GEN_HTABLE_SIZE);
+    qht_reset_size(&uc->tb_ctx.htable, CODE_GEN_HTABLE_SIZE);
     page_flush_tb(uc);
 
     tcg_ctx->code_gen_ptr = tcg_ctx->code_gen_buffer;
     /* XXX: flush processor icache at this point if cache flush is
        expensive */
-    tcg_ctx->tb_ctx.tb_flush_count++;
+    uc->tb_ctx.tb_flush_count++;
 }
 
 /*
@@ -1048,7 +1041,7 @@ do_tb_invalidate_check(struct qht *ht, void *p, uint32_t hash, void *userp)
 static void tb_invalidate_check(struct uc_struct *uc, target_ulong address)
 {
     address &= TARGET_PAGE_MASK;
-    qht_iter(&uc->tcg_ctx->tb_ctx.htable, do_tb_invalidate_check, &address);
+    qht_iter(&uc->tb_ctx.htable, do_tb_invalidate_check, &address);
 }
 
 static void
@@ -1068,7 +1061,7 @@ do_tb_page_check(struct qht *ht, void *p, uint32_t hash, void *userp)
 /* verify that all the pages have correct rights for code */
 static void tb_page_check(struct uc_struct *uc)
 {
-    qht_iter(&uc->tcg_ctx->tb_ctx.htable, do_tb_page_check, NULL);
+    qht_iter(&uc->tb_ctx.htable, do_tb_page_check, NULL);
 }
 
 #endif /* CONFIG_USER_ONLY */
@@ -1156,7 +1149,6 @@ static inline void tb_jmp_unlink(TranslationBlock *tb)
 void tb_phys_invalidate(struct uc_struct *uc,
     TranslationBlock *tb, tb_page_addr_t page_addr)
 {
-    TCGContext *tcg_ctx = uc->tcg_ctx;
     CPUState *cpu = uc->cpu;
     PageDesc *p;
     uint32_t h;
@@ -1168,7 +1160,7 @@ void tb_phys_invalidate(struct uc_struct *uc,
     phys_pc = tb->page_addr[0] + (tb->pc & ~TARGET_PAGE_MASK);
     h = tb_hash_func(phys_pc, tb->pc, tb->flags, tb->cflags & CF_HASH_MASK,
                      tb->trace_vcpu_dstate);
-    qht_remove(&tcg_ctx->tb_ctx.htable, tb, h);
+    qht_remove(&uc->tb_ctx.htable, tb, h);
 
     /* remove the TB from the page list */
     if (tb->page_addr[0] != page_addr) {
@@ -1195,7 +1187,7 @@ void tb_phys_invalidate(struct uc_struct *uc,
     /* suppress any remaining jumps to this TB */
     tb_jmp_unlink(tb);
 
-    tcg_ctx->tb_ctx.tb_phys_invalidate_count++;
+    uc->tb_ctx.tb_phys_invalidate_count++;
 }
 
 static inline void set_bits(uint8_t *tab, int start, int len)
@@ -1311,7 +1303,6 @@ static inline void tb_alloc_page(struct uc_struct *uc, TranslationBlock *tb,
 static void tb_link_page(struct uc_struct *uc,
     TranslationBlock *tb, tb_page_addr_t phys_pc, tb_page_addr_t phys_page2)
 {
-    TCGContext *tcg_ctx = uc->tcg_ctx;
     uint32_t h;
 
     /* add in the page list */
@@ -1325,7 +1316,7 @@ static void tb_link_page(struct uc_struct *uc,
     /* add in the hash table */
     h = tb_hash_func(phys_pc, tb->pc, tb->flags, tb->cflags & CF_HASH_MASK,
                      tb->trace_vcpu_dstate);
-    qht_insert(&tcg_ctx->tb_ctx.htable, tb, h);
+    qht_insert(&uc->tb_ctx.htable, tb, h);
 
 #ifdef CONFIG_USER_ONLY
     if (DEBUG_TB_CHECK_GATE) {
@@ -1435,37 +1426,6 @@ TranslationBlock *tb_gen_code(CPUState *cpu,
     tcg_ctx.search_out_len += search_size;
 #endif
 
-/* UNICORN: Commented out
-#ifdef DEBUG_DISAS
-    if (qemu_loglevel_mask(CPU_LOG_TB_OUT_ASM) &&
-        qemu_log_in_addr_range(tb->pc)) {
-        qemu_log("OUT: [size=%d]\n", gen_code_size);
-        if (tcg_ctx->data_gen_ptr) {
-            size_t code_size = tcg_ctx->data_gen_ptr - tb->tc.ptr;
-            size_t data_size = gen_code_size - code_size;
-            size_t i;
-
-            log_disas(tb->tc.ptr, code_size);
-
-            for (i = 0; i < data_size; i += sizeof(tcg_target_ulong)) {
-                if (sizeof(tcg_target_ulong) == 8) {
-                    qemu_log("0x%08" PRIxPTR ":  .quad  0x%016" PRIx64 "\n",
-                             (uintptr_t)tcg_ctx->data_gen_ptr + i,
-                             *(uint64_t *)(tcg_ctx->data_gen_ptr + i));
-                } else {
-                    qemu_log("0x%08" PRIxPTR ":  .long  0x%08x\n",
-                             (uintptr_t)tcg_ctx->data_gen_ptr + i,
-                             *(uint32_t *)(tcg_ctx->data_gen_ptr + i));
-                }
-            }
-        } else {
-            log_disas(tb->tc.ptr, gen_code_size);
-        }
-        qemu_log("\n");
-        qemu_log_flush();
-    }
-#endif*/
-
     tcg_ctx->code_gen_ptr = (void *)
         ROUND_UP((uintptr_t)gen_code_buf + gen_code_size + search_size,
                  CODE_GEN_ALIGN);
@@ -1498,7 +1458,7 @@ TranslationBlock *tb_gen_code(CPUState *cpu,
      * through the physical hash table and physical page list.
      */
     tb_link_page(cpu->uc, tb, phys_pc, phys_page2);
-    g_tree_insert(tcg_ctx->tb_ctx.tb_tree, &tb->tc, tb);
+    g_tree_insert(cpu->uc->tb_ctx.tb_tree, &tb->tc, tb);
     return tb;
 }
 
@@ -1557,7 +1517,7 @@ void tb_invalidate_phys_page_range(struct uc_struct *uc, tb_page_addr_t start, t
     PageDesc *p;
     int n;
 #ifdef TARGET_HAS_PRECISE_SMC
-    CPUState *cpu = current_cpu;
+    CPUState *cpu = uc->current_cpu;
     CPUArchState *env = NULL;
     int current_tb_not_found = is_cpu_write_access;
     TranslationBlock *current_tb = NULL;
@@ -1762,11 +1722,10 @@ static bool tb_invalidate_phys_page(tb_page_addr_t addr, uintptr_t pc)
  */
 static TranslationBlock *tb_find_pc(struct uc_struct *uc, uintptr_t tc_ptr)
 {
-    TCGContext *tcg_ctx = uc->tcg_ctx;
     struct tb_tc s = {0};
     s.ptr = (void *)tc_ptr;
 
-    return g_tree_lookup(tcg_ctx->tb_ctx.tb_tree, &s);
+    return g_tree_lookup(uc->tb_ctx.tb_tree, &s);
 }
 
 #if !defined(CONFIG_USER_ONLY)
@@ -1896,70 +1855,6 @@ void tb_flush_jmp_cache(CPUState *cpu, target_ulong addr)
     tb_jmp_cache_clear_page(cpu, addr);
 }
 
-#if 0
-void dump_exec_info(FILE *f, fprintf_function cpu_fprintf)
-{
-    int i, target_code_size, max_target_code_size;
-    int direct_jmp_count, direct_jmp2_count, cross_page;
-    TranslationBlock *tb;
-
-    target_code_size = 0;
-    max_target_code_size = 0;
-    cross_page = 0;
-    direct_jmp_count = 0;
-    direct_jmp2_count = 0;
-    for (i = 0; i < tcg_ctx.tb_ctx.nb_tbs; i++) {
-        tb = &tcg_ctx.tb_ctx.tbs[i];
-        target_code_size += tb->size;
-        if (tb->size > max_target_code_size) {
-            max_target_code_size = tb->size;
-        }
-        if (tb->page_addr[1] != -1) {
-            cross_page++;
-        }
-        if (tb->jmp_reset_offset[0] != TB_JMP_RESET_OFFSET_INVALID) {
-            direct_jmp_count++;
-            if (tb->jmp_reset_offset[1] != TB_JMP_RESET_OFFSET_INVALID) {
-                direct_jmp2_count++;
-            }
-        }
-    }
-    /* XXX: avoid using doubles ? */
-    cpu_fprintf(f, "Translation buffer state:\n");
-    cpu_fprintf(f, "gen code size       %td/%zd\n",
-                tcg_ctx->code_gen_ptr - tcg_ctx->code_gen_buffer,
-                tcg_ctx->code_gen_highwater - tcg_ctx->code_gen_buffer);
-    cpu_fprintf(f, "TB count            %d\n", tcg_ctx.tb_ctx.nb_tbs);
-    cpu_fprintf(f, "TB avg target size  %d max=%d bytes\n",
-            tcg_ctx.tb_ctx.nb_tbs ? target_code_size /
-                    tcg_ctx.tb_ctx.nb_tbs : 0,
-            max_target_code_size);
-    cpu_fprintf(f, "TB avg host size    %td bytes (expansion ratio: %0.1f)\n",
-            tcg_ctx.tb_ctx.nb_tbs ? (tcg_ctx.code_gen_ptr -
-                                     tcg_ctx.code_gen_buffer) /
-                                     tcg_ctx.tb_ctx.nb_tbs : 0,
-                target_code_size ? (double) (tcg_ctx.code_gen_ptr -
-                                             tcg_ctx.code_gen_buffer) /
-                                             target_code_size : 0);
-    cpu_fprintf(f, "cross page TB count %d (%d%%)\n", cross_page,
-            tcg_ctx.tb_ctx.nb_tbs ? (cross_page * 100) /
-                                    tcg_ctx.tb_ctx.nb_tbs : 0);
-    cpu_fprintf(f, "direct jump count   %d (%d%%) (2 jumps=%d %d%%)\n",
-                direct_jmp_count,
-                tcg_ctx.tb_ctx.nb_tbs ? (direct_jmp_count * 100) /
-                        tcg_ctx.tb_ctx.nb_tbs : 0,
-                direct_jmp2_count,
-                tcg_ctx.tb_ctx.nb_tbs ? (direct_jmp2_count * 100) /
-                        tcg_ctx.tb_ctx.nb_tbs : 0);
-    cpu_fprintf(f, "\nStatistics:\n");
-    cpu_fprintf(f, "TB flush count      %d\n", tcg_ctx.tb_ctx.tb_flush_count);
-    cpu_fprintf(f, "TB invalidate count %d\n",
-            tcg_ctx.tb_ctx.tb_phys_invalidate_count);
-    //cpu_fprintf(f, "TLB flush count     %d\n", tlb_flush_count);
-    tcg_dump_info(f, cpu_fprintf);
-}
-#endif
-
 #else /* CONFIG_USER_ONLY */
 
 void cpu_interrupt(CPUState *cpu, int mask)
@@ -1967,124 +1862,6 @@ void cpu_interrupt(CPUState *cpu, int mask)
     cpu->interrupt_request |= mask;
     cpu->tcg_exit_req = 1;
 }
-
-#if 0
-/*
- * Walks guest process memory "regions" one by one
- * and calls callback function 'fn' for each region.
- */
-struct walk_memory_regions_data {
-    walk_memory_regions_fn fn;
-    void *priv;
-    target_ulong start;
-    int prot;
-};
-
-static int walk_memory_regions_end(struct walk_memory_regions_data *data,
-                                   target_ulong end, int new_prot)
-{
-    if (data->start != -1u) {
-        int rc = data->fn(data->priv, data->start, end, data->prot);
-        if (rc != 0) {
-            return rc;
-        }
-    }
-
-    data->start = (new_prot ? end : -1u);
-    data->prot = new_prot;
-
-    return 0;
-}
-
-static int walk_memory_regions_1(struct walk_memory_regions_data *data,
-                                 target_ulong base, int level, void **lp)
-{
-    target_ulong pa;
-    int i, rc;
-
-    if (*lp == NULL) {
-        return walk_memory_regions_end(data, base, 0);
-    }
-
-    if (level == 0) {
-        PageDesc *pd = *lp;
-
-        for (i = 0; i < V_L2_SIZE; ++i) {
-            int prot = pd[i].flags;
-
-            pa = base | (i << TARGET_PAGE_BITS);
-            if (prot != data->prot) {
-                rc = walk_memory_regions_end(data, pa, prot);
-                if (rc != 0) {
-                    return rc;
-                }
-            }
-        }
-    } else {
-        void **pp = *lp;
-
-        for (i = 0; i < V_L2_SIZE; ++i) {
-            pa = base | ((target_ulong)i <<
-                (TARGET_PAGE_BITS + V_L2_BITS * level));
-            rc = walk_memory_regions_1(data, pa, level - 1, pp + i);
-            if (rc != 0) {
-                return rc;
-            }
-        }
-    }
-
-    return 0;
-}
-
-typedef int (*walk_memory_regions_fn)(void *, target_ulong,
-        target_ulong, unsigned long);
-
-static int walk_memory_regions(void *priv, walk_memory_regions_fn fn)
-{
-    struct walk_memory_regions_data data;
-    uintptr_t i, l1_sz = v_l1_size;
-
-    data.fn = fn;
-    data.priv = priv;
-    data.start = -1u;
-    data.prot = 0;
-
-    for (i = 0; i < l1_sz; i++) {
-        target_ulong base = i << (v_l1_shift + TARGET_PAGE_BITS);
-        int rc = walk_memory_regions_1(&data, base, v_l2_levels, l1_map + i);
-        if (rc != 0) {
-            return rc;
-        }
-    }
-
-    return walk_memory_regions_end(&data, 0, 0);
-}
-
-static int dump_region(void *priv, target_ulong start,
-    target_ulong end, unsigned long prot)
-{
-    FILE *f = (FILE *)priv;
-
-    (void) fprintf(f, TARGET_FMT_lx"-"TARGET_FMT_lx
-        " "TARGET_FMT_lx" %c%c%c\n",
-        start, end, end - start,
-        ((prot & PAGE_READ) ? 'r' : '-'),
-        ((prot & PAGE_WRITE) ? 'w' : '-'),
-        ((prot & PAGE_EXEC) ? 'x' : '-'));
-
-    return 0;
-}
-
-/* dump memory mappings */
-void page_dump(FILE *f)
-{
-    const int length = sizeof(target_ulong) * 2;
-    (void) fprintf(f, "%-*s %-*s %-*s %s\n",
-            length, "start", length, "end", length, "size", "prot");
-    walk_memory_regions(f, dump_region);
-}
-
-#endif
 
 int page_get_flags(target_ulong address)
 {
