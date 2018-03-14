@@ -2831,6 +2831,8 @@
 #define tcg_out_bswap64 tcg_out_bswap64_powerpc
 #define tcg_out_call tcg_out_call_powerpc
 #define tcg_out_cmp tcg_out_cmp_powerpc
+#define tcg_code_capacity tcg_code_capacity_powerpc
+#define tcg_code_size tcg_code_size_powerpc
 #define tcg_out_ext16s tcg_out_ext16s_powerpc
 #define tcg_out_ext16u tcg_out_ext16u_powerpc
 #define tcg_out_ext32s tcg_out_ext32s_powerpc
@@ -2882,6 +2884,8 @@
 #define tcg_reg_alloc_start tcg_reg_alloc_start_powerpc
 #define tcg_reg_free tcg_reg_free_powerpc
 #define tcg_reg_sync tcg_reg_sync_powerpc
+#define tcg_region_init tcg_region_init_powerpc
+#define tcg_region_reset_all tcg_region_reset_all_powerpc
 #define tcg_set_frame tcg_set_frame_powerpc
 #define tcg_set_nop tcg_set_nop_powerpc
 #define tcg_swap_cond tcg_swap_cond_powerpc

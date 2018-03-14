@@ -2831,6 +2831,8 @@
 #define tcg_out_bswap64 tcg_out_bswap64_sparc64
 #define tcg_out_call tcg_out_call_sparc64
 #define tcg_out_cmp tcg_out_cmp_sparc64
+#define tcg_code_capacity tcg_code_capacity_sparc64
+#define tcg_code_size tcg_code_size_sparc64
 #define tcg_out_ext16s tcg_out_ext16s_sparc64
 #define tcg_out_ext16u tcg_out_ext16u_sparc64
 #define tcg_out_ext32s tcg_out_ext32s_sparc64
@@ -2882,6 +2884,8 @@
 #define tcg_reg_alloc_start tcg_reg_alloc_start_sparc64
 #define tcg_reg_free tcg_reg_free_sparc64
 #define tcg_reg_sync tcg_reg_sync_sparc64
+#define tcg_region_init tcg_region_init_sparc64
+#define tcg_region_reset_all tcg_region_reset_all_sparc64
 #define tcg_set_frame tcg_set_frame_sparc64
 #define tcg_set_nop tcg_set_nop_sparc64
 #define tcg_swap_cond tcg_swap_cond_sparc64

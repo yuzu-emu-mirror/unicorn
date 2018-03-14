@@ -178,6 +178,7 @@ struct uc_struct {
 
     // qemu/cpus.c
     bool mttcg_enabled;
+    int tcg_region_inited;
 
     // qemu/exec.c
     MemoryRegion *system_memory;
@@ -226,6 +227,7 @@ struct uc_struct {
     // tcg.c
     void *tcg_ctxs;         // actually "TCGContext **tcg_ctxs"
     unsigned int n_tcg_ctxs;
+    struct tcg_region_state region;
 
     /* memory.c */
     unsigned memory_region_transaction_depth;

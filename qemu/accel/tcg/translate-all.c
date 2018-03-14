@@ -586,15 +586,13 @@ static inline void *alloc_code_gen_buffer(struct uc_struct *uc)
     TCGContext *tcg_ctx = uc->tcg_ctx;
     void *buf = static_code_gen_buffer;
     void *end = static_code_gen_buffer + sizeof(static_code_gen_buffer);
-    size_t full_size, size;
+    size_t size;
 
     /* page-align the beginning and end of the buffer */
     buf = QEMU_ALIGN_PTR_UP(buf, uc->qemu_real_host_page_size);
     end = QEMU_ALIGN_PTR_DOWN(end, uc->qemu_real_host_page_size);
 
-    /* Reserve a guard page.  */
-    full_size = end - buf;
-    size = full_size - uc->qemu_real_host_page_size;
+    size = end - buf;
 
     /* Honor a command-line option limiting the size of the buffer.  */
     if (size > tcg_ctx->code_gen_buffer_size) {
@@ -613,9 +611,6 @@ static inline void *alloc_code_gen_buffer(struct uc_struct *uc)
     if (qemu_mprotect_rwx(uc, buf, size)) {
         abort();
     }
-    if (qemu_mprotect_none(uc, buf + size, uc->qemu_real_host_page_size)) {
-        abort();
-    }
     // Unicorn: commented out
     //qemu_madvise(buf, size, QEMU_MADV_HUGEPAGE);
 
@@ -624,20 +619,10 @@ static inline void *alloc_code_gen_buffer(struct uc_struct *uc)
 #elif defined(_WIN32)
 static inline void *alloc_code_gen_buffer(struct uc_struct *uc)
 {
-    TCGContext *tcg_ctx = uc->tcg_ctx;
-    size_t size = tcg_ctx->code_gen_buffer_size;
-    void *buf1, *buf2;
-
-    /* Perform the allocation in two steps, so that the guard page
-       is reserved but uncommitted.  */
-    buf1 = VirtualAlloc(NULL, size + uc->qemu_real_host_page_size,
-                        MEM_RESERVE, PAGE_NOACCESS);
-    if (buf1 != NULL) {
-        buf2 = VirtualAlloc(buf1, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-        assert(buf1 == buf2);
-    }
-
-    return buf1;
+    void *buf;
+    buf = VirtualAlloc(NULL, size, MEM_RESERVE | MEM_COMMIT,
+                        PAGE_EXECUTE_READWRITE);
+    return buf;
 }
 
 void free_code_gen_buffer(struct uc_struct *uc)
@@ -664,6 +649,7 @@ void free_code_gen_buffer(struct uc_struct *uc)
 static inline void *alloc_code_gen_buffer(struct uc_struct *uc)
 {
     TCGContext *tcg_ctx = uc->tcg_ctx;
+    int prot = PROT_WRITE | PROT_READ | PROT_EXEC;
     int flags = MAP_PRIVATE | MAP_ANONYMOUS;
     uintptr_t start = 0;
     size_t size = tcg_ctx->code_gen_buffer_size;
@@ -698,8 +684,7 @@ static inline void *alloc_code_gen_buffer(struct uc_struct *uc)
 #  endif
 # endif
 
-    buf = mmap((void *)start, size + uc->qemu_real_host_page_size,
-               PROT_NONE, flags, -1, 0);
+    buf = mmap((void *)start, size, prot, flags, -1, 0);
     if (buf == MAP_FAILED) {
         return NULL;
     }
@@ -709,24 +694,23 @@ static inline void *alloc_code_gen_buffer(struct uc_struct *uc)
         /* Try again, with the original still mapped, to avoid re-acquiring
            that 256mb crossing.  This time don't specify an address.  */
         size_t size2;
-        void *buf2 = mmap(NULL, size + uc->qemu_real_host_page_size,
-                          PROT_NONE, flags, -1, 0);
+        void *buf2 = mmap(NULL, size, prot, flags, -1, 0);
         switch ((int)(buf2 != MAP_FAILED)) {
         case 1:
             if (!cross_256mb(buf2, size)) {
                 /* Success!  Use the new buffer.  */
-                munmap(buf, size + uc->qemu_real_host_page_size);
+                munmap(buf, size);
                 break;
             }
             /* Failure.  Work with what we had.  */
-            munmap(buf2, size + uc->qemu_real_host_page_size);
+            munmap(buf2, size);
             /* fallthru */
         default:
             /* Split the original buffer.  Free the smaller half.  */
             buf2 = split_cross_256mb(buf, size);
             size2 = tcg_ctx->code_gen_buffer_size;
             if (buf == buf2) {
-                munmap(buf + size2 + uc->qemu_real_host_page_size, size - size2);
+                munmap(buf + size2, size - size2);
             } else {
                 munmap(buf, size - size2);
             }
@@ -737,10 +721,6 @@ static inline void *alloc_code_gen_buffer(struct uc_struct *uc)
         buf = buf2;
     }
 #endif
-
-    /* Make the final buffer accessible.  The guard page at the end
-       will remain inaccessible with PROT_NONE.  */
-    mprotect(buf, size, PROT_WRITE | PROT_READ | PROT_EXEC);
 
     /* Request large pages for the buffer.  */
     // Unicorn: Commented out
@@ -948,20 +928,14 @@ static gboolean tb_host_size_iter(gpointer key, gpointer value, gpointer data)
 void tb_flush(CPUState *cpu)
 {
     struct uc_struct* uc = cpu->uc;
-    TCGContext *tcg_ctx = uc->tcg_ctx;
 
     if (DEBUG_TB_FLUSH_GATE) {
         size_t nb_tbs = g_tree_nnodes(uc->tb_ctx.tb_tree);
         size_t host_size = 0;
 
         g_tree_foreach(uc->tb_ctx.tb_tree, tb_host_size_iter, &host_size);
-        printf("qemu: flush code_size=%td nb_tbs=%zu avg_tb_size=%zu\n",
-               tcg_ctx->code_gen_ptr - tcg_ctx->code_gen_buffer, nb_tbs,
-               nb_tbs > 0 ? host_size / nb_tbs : 0);
-    }
-    if ((unsigned long)((char*)tcg_ctx->code_gen_ptr - (char*)tcg_ctx->code_gen_buffer)
-        > tcg_ctx->code_gen_buffer_size) {
-        cpu_abort(cpu, "Internal error: code buffer overflow\n");
+        printf("qemu: flush code_size=%zu nb_tbs=%zu avg_tb_size=%zu\n",
+               tcg_code_size(uc), nb_tbs, nb_tbs > 0 ? host_size / nb_tbs : 0);
     }
 
     cpu_tb_jmp_cache_clear(cpu);
@@ -974,10 +948,10 @@ void tb_flush(CPUState *cpu)
     qht_reset_size(&uc->tb_ctx.htable, CODE_GEN_HTABLE_SIZE);
     page_flush_tb(uc);
 
-    tcg_ctx->code_gen_ptr = tcg_ctx->code_gen_buffer;
+    tcg_region_reset_all(uc);
     /* XXX: flush processor icache at this point if cache flush is
        expensive */
-    uc->tb_ctx.tb_flush_count++;
+    atomic_mb_set(&uc->tb_ctx.tb_flush_count, uc->tb_ctx.tb_flush_count + 1);
 }
 
 /*
@@ -1308,9 +1282,9 @@ TranslationBlock *tb_gen_code(CPUState *cpu,
 
     phys_pc = get_page_addr_code(env, pc);
 
+ buffer_overflow:
     tb = tb_alloc(env->uc, pc);
     if (unlikely(!tb)) {
- buffer_overflow:
         /* flush must be done */
         tb_flush(cpu);
         /* cannot fail at this point */
@@ -1393,9 +1367,9 @@ TranslationBlock *tb_gen_code(CPUState *cpu,
     tcg_ctx.search_out_len += search_size;
 #endif
 
-    tcg_ctx->code_gen_ptr = (void *)
+    atomic_set(&tcg_ctx->code_gen_ptr, (void *)
         ROUND_UP((uintptr_t)gen_code_buf + gen_code_size + search_size,
-                 CODE_GEN_ALIGN);
+                 CODE_GEN_ALIGN));
 
     /* init jump list */
     assert(((uintptr_t)tb & 3) == 0);

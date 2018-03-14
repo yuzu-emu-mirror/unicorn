@@ -2831,6 +2831,8 @@
 #define tcg_out_bswap64 tcg_out_bswap64_mips64el
 #define tcg_out_call tcg_out_call_mips64el
 #define tcg_out_cmp tcg_out_cmp_mips64el
+#define tcg_code_capacity tcg_code_capacity_mips64el
+#define tcg_code_size tcg_code_size_mips64el
 #define tcg_out_ext16s tcg_out_ext16s_mips64el
 #define tcg_out_ext16u tcg_out_ext16u_mips64el
 #define tcg_out_ext32s tcg_out_ext32s_mips64el
@@ -2882,6 +2884,8 @@
 #define tcg_reg_alloc_start tcg_reg_alloc_start_mips64el
 #define tcg_reg_free tcg_reg_free_mips64el
 #define tcg_reg_sync tcg_reg_sync_mips64el
+#define tcg_region_init tcg_region_init_mips64el
+#define tcg_region_reset_all tcg_region_reset_all_mips64el
 #define tcg_set_frame tcg_set_frame_mips64el
 #define tcg_set_nop tcg_set_nop_mips64el
 #define tcg_swap_cond tcg_swap_cond_mips64el

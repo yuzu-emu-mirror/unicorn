@@ -1142,6 +1142,12 @@ TCGOp *tcg_op_insert_after(TCGContext *s, TCGOp *op, TCGOpcode opc, int narg);
 
 void tcg_optimize(TCGContext *s);
 
+void tcg_region_init(struct uc_struct *uc);
+void tcg_region_reset_all(struct uc_struct *uc);
+
+size_t tcg_code_size(struct uc_struct *uc);
+size_t tcg_code_capacity(struct uc_struct *uc);
+
 /* Called with tb_lock held.  */
 static inline void *tcg_malloc(TCGContext *s, int size)
 {
