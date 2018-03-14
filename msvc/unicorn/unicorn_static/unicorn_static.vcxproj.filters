@@ -183,6 +183,9 @@
     <ClCompile Include="..\..\..\qemu\util\module.c">
       <Filter>qemu\util</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\qemu\util\osdep.c">
+      <Filter>qemu\util</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\qemu\util\oslib-win32.c">
       <Filter>qemu\util</Filter>
     </ClCompile>

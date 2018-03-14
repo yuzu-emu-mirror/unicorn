@@ -58,6 +58,7 @@
     <ClCompile Include="..\..\..\qemu\util\log.c" />
     <ClCompile Include="..\..\..\qemu\util\qht.c" />
     <ClCompile Include="..\..\..\qemu\util\module.c" />
+    <ClCompile Include="..\..\..\qemu\util\osdep.c" />
     <ClCompile Include="..\..\..\qemu\util\oslib-win32.c" />
     <ClCompile Include="..\..\..\qemu\util\qemu-error.c" />
     <ClCompile Include="..\..\..\qemu\util\qemu-thread-win32.c" />

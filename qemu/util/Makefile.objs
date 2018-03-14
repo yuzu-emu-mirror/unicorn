@@ -10,5 +10,6 @@ util-obj-y += crc32c.o
 util-obj-y += host-utils.o
 util-obj-y += getauxval.o
 util-obj-y += log.o
+util-obj-y += osdep.o
 util-obj-y += qht.o
 util-obj-y += range.o

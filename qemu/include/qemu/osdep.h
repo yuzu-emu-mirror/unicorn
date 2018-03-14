@@ -86,9 +86,15 @@
 #include "sysemu/os-win32.h"
 #endif
 
+#ifdef CONFIG_POSIX
+#include "sysemu/os-posix.h"
+#endif
+
 #include "glib_compat.h"
 
 #include "qemu/typedefs.h"
+
+struct uc_struct;
 
 /*
  * We have a lot of unaudited code that may fail in strange ways, or
@@ -241,6 +247,9 @@
 #define ARRAY_SIZE(x) ((sizeof(x) / sizeof((x)[0])) + \
                        QEMU_BUILD_BUG_ON_ZERO(!QEMU_IS_ARRAY(x)))
 #endif
+
+int qemu_mprotect_rwx(struct uc_struct *uc, void *addr, size_t size);
+int qemu_mprotect_none(struct uc_struct *uc, void *addr, size_t size);
 
 void *qemu_try_memalign(size_t alignment, size_t size);
 void *qemu_memalign(size_t alignment, size_t size);
