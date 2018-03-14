@@ -357,8 +357,7 @@ static inline void cpu_tb_jmp_cache_clear(CPUState *cpu)
  *
  * Returns: %true if we are in MTTCG mode %false otherwise.
  */
-extern bool mttcg_enabled;
-#define qemu_tcg_mttcg_enabled() (mttcg_enabled)
+#define qemu_tcg_mttcg_enabled(uc) ((uc)->mttcg_enabled)
 
 /**
  * cpu_paging_enabled:
