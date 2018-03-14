@@ -307,9 +307,10 @@ UNICORN_EXPORT
 uc_err uc_close(uc_engine *uc)
 {
     // Cleanup internally.
-    if (uc->release)
-        uc->release(uc->tcg_ctx);
-    g_free(uc->tcg_ctx);
+    if (uc->release) {
+        uc->release(uc->tcg_init_ctx);
+    }
+    g_free(uc->tcg_init_ctx);
 
     // Cleanup CPU.
     g_free(uc->cpu->cpu_ases);

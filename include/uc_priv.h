@@ -217,9 +217,10 @@ struct uc_struct {
     intptr_t qemu_host_page_mask;
 
     /* code generation context */
-    void *tcg_ctx;  // for "TCGContext tcg_ctx" in qemu/translate-all.c
+    void *tcg_ctx;      // for "TCGContext tcg_ctx" in translate-all.c
+    void *tcg_init_ctx; // for "TCGContext init_tcg_contex" in translate-all.c
     TBContext tb_ctx;
-    bool parallel_cpus; // for "bool parallel_cpus" in qemu/translate-all.c
+    bool parallel_cpus; // for "bool parallel_cpus" in translate-all.c
 
     /* memory.c */
     unsigned memory_region_transaction_depth;
