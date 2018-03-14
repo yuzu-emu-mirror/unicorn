@@ -70,6 +70,17 @@ static inline unsigned long *bitmap_new(long nbits)
     return ptr;
 }
 
+
+static inline void bitmap_zero(unsigned long *dst, long nbits)
+{
+    if (small_nbits(nbits)) {
+        *dst = 0UL;
+    } else {
+        long len = BITS_TO_LONGS(nbits) * sizeof(unsigned long);
+        memset(dst, 0, len);
+    }
+}
+
 static inline long bitmap_count_one(const unsigned long *bitmap, long nbits)
 {
     if (small_nbits(nbits)) {

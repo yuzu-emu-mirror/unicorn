@@ -82,22 +82,13 @@ static void reset_temp(TCGContext *s, TCGArg arg)
     reset_ts(arg_temp(arg));
 }
 
-/* Reset all temporaries, given that there are NB_TEMPS of them.  */
-static void reset_all_temps(TCGContext *s, int nb_temps)
-{
-    long len = BITS_TO_LONGS(nb_temps) * sizeof(unsigned long);
-    memset(&s->temps2_used.l, 0, len);
-}
-
 /* Initialize and activate a temporary.  */
-static void init_ts_info(TCGContext *s, TCGTemp *ts)
+static void init_ts_info(TCGContext *s, struct tcg_temp_info *infos,
+                         TCGTempSet *temps_used, TCGTemp *ts)
 {
-    struct tcg_temp_info *temps = s->temps2;
-    TCGTempSet *temps_used = &s->temps2_used;
-
     size_t idx = temp_idx(s, ts);
     if (!test_bit(idx, temps_used->l)) {
-        struct tcg_temp_info *ti = &temps[idx];
+        struct tcg_temp_info *ti = &infos[idx];
 
         ts->state_ptr = ti;
         ti->next_copy = ts;
@@ -108,9 +99,10 @@ static void init_ts_info(TCGContext *s, TCGTemp *ts)
     }
 }
 
-static void init_arg_info(TCGContext *s, TCGArg arg)
+static void init_arg_info(TCGContext *s, struct tcg_temp_info *infos,
+                          TCGTempSet *temps_used, TCGArg arg)
 {
-    init_ts_info(s, arg_temp(arg));
+    init_ts_info(s, infos, temps_used, arg_temp(arg));
 }
 
 static TCGTemp *find_better_copy(TCGTemp *ts)
@@ -594,6 +586,8 @@ void tcg_optimize(TCGContext *s)
 {
     int nb_temps, nb_globals;
     TCGOp *op, *op_next, *prev_mb = NULL;
+    struct tcg_temp_info *infos;
+    TCGTempSet temps_used;
 
     /* Array VALS has an element for each temp.
        If this temp holds a constant then its value is kept in VALS' element.
@@ -602,7 +596,8 @@ void tcg_optimize(TCGContext *s)
 
     nb_temps = s->nb_temps;
     nb_globals = s->nb_globals;
-    reset_all_temps(s, nb_temps);
+    bitmap_zero(temps_used.l, nb_temps);
+    infos = tcg_malloc(s, sizeof(struct tcg_temp_info) * nb_temps);
 
     QTAILQ_FOREACH_SAFE(op, &s->ops, link, op_next) {
         tcg_target_ulong mask, partmask, affected;
@@ -619,14 +614,14 @@ void tcg_optimize(TCGContext *s)
             for (i = 0; i < nb_oargs + nb_iargs; i++) {
                 TCGTemp *ts = arg_temp(op->args[i]);
                 if (ts) {
-                    init_ts_info(s, ts);
+                    init_ts_info(s, infos, &temps_used, ts);
                 }
             }
         } else {
             nb_oargs = def->nb_oargs;
             nb_iargs = def->nb_iargs;
             for (i = 0; i < nb_oargs + nb_iargs; i++) {
-                init_arg_info(s, op->args[i]);
+                init_arg_info(s, infos, &temps_used, op->args[i]);
             }
         }
 
@@ -1203,7 +1198,7 @@ void tcg_optimize(TCGContext *s)
                                            op->args[1], op->args[2]);
             if (tmp != 2) {
                 if (tmp) {
-                    reset_all_temps(s, nb_temps);
+                    bitmap_zero(temps_used.l, nb_temps);
                     op->opc = INDEX_op_br;
                     op->args[0] = op->args[3];
                 } else {
@@ -1286,7 +1281,7 @@ void tcg_optimize(TCGContext *s)
             if (tmp != 2) {
                 if (tmp) {
             do_brcond_true:
-                    reset_all_temps(s, nb_temps);
+                    bitmap_zero(temps_used.l, nb_temps);
                     op->opc = INDEX_op_br;
                     op->args[0] = op->args[5];
                 } else {
@@ -1302,7 +1297,7 @@ void tcg_optimize(TCGContext *s)
                 /* Simplify LT/GE comparisons vs zero to a single compare
                    vs the high word of the input.  */
             do_brcond_high:
-                reset_all_temps(s, nb_temps);
+                bitmap_zero(temps_used.l, nb_temps);
                 op->opc = INDEX_op_brcond_i32;
                 op->args[0] = op->args[1];
                 op->args[1] = op->args[3];
@@ -1328,7 +1323,7 @@ void tcg_optimize(TCGContext *s)
                     goto do_default;
                 }
             do_brcond_low:
-                reset_all_temps(s, nb_temps);
+                bitmap_zero(temps_used.l, nb_temps);
                 op->opc = INDEX_op_brcond_i32;
                 op->args[1] = op->args[2];
                 op->args[2] = op->args[4];
@@ -1433,7 +1428,7 @@ void tcg_optimize(TCGContext *s)
             if (!(op->args[nb_oargs + nb_iargs + 1]
                   & (TCG_CALL_NO_READ_GLOBALS | TCG_CALL_NO_WRITE_GLOBALS))) {
                 for (i = 0; i < nb_globals; i++) {
-                    if (test_bit(i, s->temps2_used.l)) {
+                    if (test_bit(i, temps_used.l)) {
                         reset_ts(&s->temps[i]);
                     }
                 }
@@ -1448,7 +1443,7 @@ void tcg_optimize(TCGContext *s)
                block, otherwise we only trash the output args.  "mask" is
                the non-zero bits mask for the first output arg.  */
             if (def->flags & TCG_OPF_BB_END) {
-                reset_all_temps(s, nb_temps);
+                bitmap_zero(temps_used.l, nb_temps);
             } else {
         do_reset_output:
                 for (i = 0; i < nb_oargs; i++) {

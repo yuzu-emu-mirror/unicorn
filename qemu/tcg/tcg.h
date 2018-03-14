@@ -851,10 +851,6 @@ struct TCGContext {
     int indirect_reg_alloc_order[50];
     TCGOpDef *tcg_op_defs;
 
-    /* qemu/tcg/optimize.c */
-    struct tcg_temp_info temps2[TCG_MAX_TEMPS];
-    TCGTempSet temps2_used;
-
     /* qemu/target-m68k/translate.c */
     TCGv_i32 cpu_halted;
     char cpu_reg_names[2 * 8 * 3 + 5 * 4];
