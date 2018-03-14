@@ -581,64 +581,25 @@ void free_code_gen_buffer(struct uc_struct *uc)
     // Do nothing, we use a static buffer.
 }
 
-# ifdef _WIN32
-static inline void do_protect(struct uc_struct *uc, void *addr, long size, int prot)
-{
-    DWORD old_protect;
-    VirtualProtect(addr, size, prot, &old_protect);
-}
-
-static inline void map_exec(struct uc_struct *uc, void *addr, long size)
-{
-    do_protect(uc, addr, size, PAGE_EXECUTE_READWRITE);
-}
-
-static inline void map_none(struct uc_struct *uc, void *addr, long size)
-{
-    do_protect(uc, addr, size, PAGE_NOACCESS);
-}
-# else
-static inline void do_protect(struct uc_struct *uc, void *addr, long size, int prot)
-{
-    uintptr_t start, end;
-
-    start = (uintptr_t)addr;
-    start &= uc->qemu_real_host_page_mask;
-
-    end = (uintptr_t)addr + size;
-    end = ROUND_UP(end, uc->qemu_real_host_page_size);
-
-    mprotect((void *)start, end - start, prot);
-}
-
-static inline void map_exec(struct uc_struct *uc, void *addr, long size)
-{
-    do_protect(uc, addr, size, PROT_READ | PROT_WRITE | PROT_EXEC);
-}
-
-static inline void map_none(struct uc_struct *uc, void *addr, long size)
-{
-    do_protect(uc, addr, size, PROT_NONE);
-}
-# endif /* WIN32 */
-
 static inline void *alloc_code_gen_buffer(struct uc_struct *uc)
 {
     TCGContext *tcg_ctx = uc->tcg_ctx;
     void *buf = static_code_gen_buffer;
+    void *end = static_code_gen_buffer + sizeof(static_code_gen_buffer);
     size_t full_size, size;
 
-    /* The size of the buffer, rounded down to end on a page boundary.  */
-    full_size = (((uintptr_t)buf + sizeof(static_code_gen_buffer))
-                 & uc->qemu_real_host_page_mask) - (uintptr_t)buf;
+    /* page-align the beginning and end of the buffer */
+    buf = QEMU_ALIGN_PTR_UP(buf, uc->qemu_real_host_page_size);
+    end = QEMU_ALIGN_PTR_DOWN(end, uc->qemu_real_host_page_size);
 
     /* Reserve a guard page.  */
+    full_size = end - buf;
     size = full_size - uc->qemu_real_host_page_size;
 
     /* Honor a command-line option limiting the size of the buffer.  */
     if (size > tcg_ctx->code_gen_buffer_size) {
-        size = (((uintptr_t)buf + tcg_ctx->code_gen_buffer_size)
-                & uc->qemu_real_host_page_mask) - (uintptr_t)buf;
+        size = QEMU_ALIGN_DOWN(tcg_ctx->code_gen_buffer_size,
+                               uc->qemu_real_host_page_size);
     }
     tcg_ctx->code_gen_buffer_size = size;
 
@@ -648,8 +609,13 @@ static inline void *alloc_code_gen_buffer(struct uc_struct *uc)
         size = tcg_ctx->code_gen_buffer_size;
     }
 #endif
-    map_exec(uc, buf, size);
-    map_none(uc, buf + size, uc->qemu_real_host_page_size);
+
+    if (qemu_mprotect_rwx(uc, buf, size)) {
+        abort();
+    }
+    if (qemu_mprotect_none(uc, buf + size, uc->qemu_real_host_page_size)) {
+        abort();
+    }
     // Unicorn: commented out
     //qemu_madvise(buf, size, QEMU_MADV_HUGEPAGE);
 
