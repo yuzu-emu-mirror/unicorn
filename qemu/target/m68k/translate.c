@@ -5291,6 +5291,9 @@ DISAS_INSN(fpu)
     case 0x06: /* flognp1 */
         gen_helper_flognp1(tcg_ctx, uc->cpu_env, cpu_dest, cpu_src);
         break;
+    case 0x09: /* ftanh */
+        gen_helper_ftanh(tcg_ctx, uc->cpu_env, cpu_dest, cpu_src);
+        break;
     case 0x0a: /* fatan */
         gen_helper_fatan(tcg_ctx, uc->cpu_env, cpu_dest, cpu_src);
         break;
