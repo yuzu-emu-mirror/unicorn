@@ -435,7 +435,8 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
         TCG_EXT4_FEATURES,
     },
     // FEAT_KVM
-    {{NULL},
+    {
+      {NULL},
       /* Unicorn: commented out
         {
             "kvmclock", "kvm-nopiodelay", "kvm-mmu", "kvmclock",
@@ -451,6 +452,26 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
         false, 0,
         R_EAX,
         TCG_KVM_FEATURES,*/
+    },
+    // FEAT_KVM_HINTS
+    {
+      {NULL},
+/* Unicorn: commented out
+        {
+            "kvm-hint-dedicated", NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
+        },
+        KVM_CPUID_FEATURES,
+        false, 0,
+        R_EDX,
+        TCG_KVM_FEATURES,
+*/
     },
     // FEAT_HYPERV_EAX
     {
@@ -970,6 +991,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
             0,
         // FEAT_KVM
             0,
+        // FEAT_KVM_HINTS
+            0,
         // FEAT_HYPERV_EAX
             0,
         // FEAT_HYPERV_EBX
@@ -1346,6 +1369,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
             0,
         // FEAT_KVM
             0,
+        // FEAT_KVM_HINTS
+            0,
         // FEAT_HYPERV_EAX
             0,
         // FEAT_HYPERV_EBX
@@ -1394,6 +1419,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
         // FEAT_C000_0001_EDX
             0,
         // FEAT_KVM
+            0,
+        // FEAT_KVM_HINTS
             0,
         // FEAT_HYPERV_EAX
             0,
@@ -1447,6 +1474,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
             0,
         // FEAT_KVM
             0,
+        // FEAT_KVM_HINTS
+            0,
         // FEAT_HYPERV_EAX
             0,
         // FEAT_HYPERV_EBX
@@ -1498,6 +1527,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
         // FEAT_C000_0001_EDX
             0,
         // FEAT_KVM
+            0,
+        // FEAT_KVM_HINTS
             0,
         // FEAT_HYPERV_EAX
             0,
@@ -1552,6 +1583,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
             0,
         // FEAT_KVM
             0,
+        // FEAT_KVM_HINTS
+            0,
         // FEAT_HYPERV_EAX
             0,
         // FEAT_HYPERV_EBX
@@ -1604,6 +1637,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
         // FEAT_C000_0001_EDX
             0,
         // FEAT_KVM
+            0,
+        // FEAT_KVM_HINTS
             0,
         // FEAT_HYPERV_EAX
             0,
@@ -1660,6 +1695,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
             0,
         // FEAT_KVM
             0,
+        // FEAT_KVM_HINTS
+            0,
         // FEAT_HYPERV_EAX
             0,
         // FEAT_HYPERV_EBX
@@ -1714,6 +1751,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
         // FEAT_C000_0001_EDX
             0,
         // FEAT_KVM
+            0,
+        // FEAT_KVM_HINTS
             0,
         // FEAT_HYPERV_EAX
             0,
@@ -1771,6 +1810,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
             0,
         // FEAT_KVM
             0,
+        // FEAT_KVM_HINTS
+            0,
         // FEAT_HYPERV_EAX
             0,
         // FEAT_HYPERV_EBX
@@ -1826,6 +1867,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
         // FEAT_C000_0001_EDX
             0,
         // FEAT_KVM
+            0,
+        // FEAT_KVM_HINTS
             0,
         // FEAT_HYPERV_EAX
             0,
@@ -1884,6 +1927,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
             0,
         // FEAT_KVM
             0,
+        // FEAT_KVM_HINTS
+            0,
         // FEAT_HYPERV_EAX
             0,
         // FEAT_HYPERV_EBX
@@ -1940,6 +1985,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
         // FEAT_C000_0001_EDX
             0,
         // FEAT_KVM
+            0,
+        // FEAT_KVM_HINTS
             0,
         // FEAT_HYPERV_EAX
             0,
@@ -1998,6 +2045,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
             0,
         // FEAT_KVM
             0,
+        // FEAT_KVM_HINTS
+            0,
         // FEAT_HYPERV_EAX
             0,
         // FEAT_HYPERV_EBX
@@ -2055,6 +2104,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
             0,
         // FEAT_KVM
             0,
+        // FEAT_KVM_HINTS
+            0,
         // FEAT_HYPERV_EAX
             0,
         // FEAT_HYPERV_EBX
@@ -2111,6 +2162,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
         // FEAT_C000_0001_EDX
             0,
         // FEAT_KVM
+            0,
+        // FEAT_KVM_HINTS
             0,
         // FEAT_HYPERV_EAX
             0,
@@ -2175,6 +2228,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
         // FEAT_C000_0001_EDX
             0,
         // FEAT_KVM
+            0,
+        // FEAT_KVM_HINTS
             0,
         // FEAT_HYPERV_EAX
             0,
@@ -2245,6 +2300,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
             0,
         // FEAT_KVM
             0,
+        // FEAT_KVM_HINTS
+            0,
         // FEAT_HYPERV_EAX
             0,
         // FEAT_HYPERV_EBX
@@ -2311,6 +2368,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
         // FEAT_C000_0001_EDX
             0,
         // FEAT_KVM
+            0,
+        // FEAT_KVM_HINTS
             0,
         // FEAT_HYPERV_EAX
             0,
@@ -2526,6 +2585,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
             0,
         // FEAT_KVM
             0,
+        // FEAT_KVM_HINTS
+            0,
         // FEAT_HYPERV_EAX
             0,
         // FEAT_HYPERV_EBX
@@ -2588,6 +2649,8 @@ static X86CPUDefinition builtin_x86_defs[] = {
         // FEAT_C000_0001_EDX
             0,
         // FEAT_KVM
+            0,
+        // FEAT_KVM_HINTS
             0,
         // FEAT_HYPERV_EAX
             0,
