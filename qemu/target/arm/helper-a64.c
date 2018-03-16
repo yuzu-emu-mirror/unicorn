@@ -571,17 +571,13 @@ uint64_t HELPER(crc32c_64)(uint64_t acc, uint64_t val, uint32_t bytes)
 /* Returns 0 on success; 1 otherwise.  */
 static uint64_t do_paired_cmpxchg64_le(CPUARMState *env, uint64_t addr,
                                        uint64_t new_lo, uint64_t new_hi,
-                                       bool parallel)
+                                       bool parallel, uintptr_t ra)
 {
-    uintptr_t ra = GETPC();
     Int128 oldv, cmpv, newv;
     bool success;
 
-    /* high and low need to be switched here because this is not actually a
-     * 128bit store but two doublewords stored consecutively
-     */
-    cmpv = int128_make128(env->exclusive_high, env->exclusive_val);
-    newv = int128_make128(new_hi, new_lo);
+    cmpv = int128_make128(env->exclusive_val, env->exclusive_high);
+    newv = int128_make128(new_lo, new_hi);
 
     if (parallel) {
 #ifndef CONFIG_ATOMIC128
@@ -634,25 +630,27 @@ static uint64_t do_paired_cmpxchg64_le(CPUARMState *env, uint64_t addr,
 uint64_t HELPER(paired_cmpxchg64_le)(CPUARMState *env, uint64_t addr,
                                               uint64_t new_lo, uint64_t new_hi)
 {
-    return do_paired_cmpxchg64_le(env, addr, new_lo, new_hi, false);
+    return do_paired_cmpxchg64_le(env, addr, new_lo, new_hi, false, GETPC());
 }
 
 uint64_t HELPER(paired_cmpxchg64_le_parallel)(CPUARMState *env, uint64_t addr,
                                               uint64_t new_lo, uint64_t new_hi)
 {
-    return do_paired_cmpxchg64_le(env, addr, new_lo, new_hi, true);
+    return do_paired_cmpxchg64_le(env, addr, new_lo, new_hi, true, GETPC());
 }
 
 static uint64_t do_paired_cmpxchg64_be(CPUARMState *env, uint64_t addr,
                                        uint64_t new_lo, uint64_t new_hi,
-                                       bool parallel)
+                                       bool parallel, uintptr_t ra)
 {
-    uintptr_t ra = GETPC();
     Int128 oldv, cmpv, newv;
     bool success;
 
-    cmpv = int128_make128(env->exclusive_val, env->exclusive_high);
-    newv = int128_make128(new_lo, new_hi);
+    /* high and low need to be switched here because this is not actually a
+     * 128bit store but two doublewords stored consecutively
+     */
+    cmpv = int128_make128(env->exclusive_high, env->exclusive_val);
+    newv = int128_make128(new_hi, new_lo);
 
     if (parallel) {
 #ifndef CONFIG_ATOMIC128
@@ -705,13 +703,13 @@ static uint64_t do_paired_cmpxchg64_be(CPUARMState *env, uint64_t addr,
 uint64_t HELPER(paired_cmpxchg64_be)(CPUARMState *env, uint64_t addr,
                                      uint64_t new_lo, uint64_t new_hi)
 {
-    return do_paired_cmpxchg64_be(env, addr, new_lo, new_hi, false);
+    return do_paired_cmpxchg64_be(env, addr, new_lo, new_hi, false, GETPC());
 }
 
 uint64_t HELPER(paired_cmpxchg64_be_parallel)(CPUARMState *env, uint64_t addr,
                                      uint64_t new_lo, uint64_t new_hi)
 {
-    return do_paired_cmpxchg64_be(env, addr, new_lo, new_hi, true);
+    return do_paired_cmpxchg64_be(env, addr, new_lo, new_hi, true, GETPC());
 }
 
 /*
