@@ -83,10 +83,8 @@ static const char * const tcg_target_reg_names[TCG_TARGET_NB_REGS] = {
 #define TCG_REG_T1  TCG_REG_G1
 #define TCG_REG_T2  TCG_REG_O7
 
-#ifdef CONFIG_USE_GUEST_BASE
+#ifndef CONFIG_SOFTMMU
 # define TCG_GUEST_BASE_REG TCG_REG_I5
-#else
-# define TCG_GUEST_BASE_REG TCG_REG_G0
 #endif
 
 #define TCG_REG_TB  TCG_REG_I1
@@ -311,7 +309,6 @@ static void patch_reloc(tcg_insn_unit *code_ptr, int type,
     case R_SPARC_WDISP19:
         assert(check_fit_ptr(pcrel >> 2, 19));
         insn &= ~INSN_OFF19(-1);
-        insn |= INSN_OFF19(value);
         insn |= INSN_OFF19(pcrel);
         break;
     case R_SPARC_13:
@@ -421,7 +418,7 @@ static inline void tcg_out_arithi(TCGContext *s, TCGReg rd, TCGReg rs1,
 }
 
 static void tcg_out_arithc(TCGContext *s, TCGReg rd, TCGReg rs1,
-               int32_t val2, int val2const, int op)
+			   int32_t val2, int val2const, int op)
 {
     tcg_out32(s, op | INSN_RD(rd) | INSN_RS1(rs1)
               | (val2const ? INSN_IMM13(val2) : INSN_RS2(val2)));
@@ -751,7 +748,7 @@ static void tcg_out_setcond_i32(TCGContext *s, TCGCond cond, TCGReg ret,
         }
         c1 = TCG_REG_G0, c2const = 0;
         cond = (cond == TCG_COND_EQ ? TCG_COND_GEU : TCG_COND_LTU);
-    break;
+	break;
 
     case TCG_COND_GTU:
     case TCG_COND_LEU:
@@ -852,16 +849,16 @@ static void tcg_out_addsub2_i64(TCGContext *s, TCGReg rl, TCGReg rh,
         }
         tcg_out_arith(s, rh, ah, bh, ARITH_ADDXC);
     } else if (bh == TCG_REG_G0) {
-    /* If we have a zero, we can perform the operation in two insns,
+	/* If we have a zero, we can perform the operation in two insns,
            with the arithmetic first, and a conditional move into place.  */
-    if (rh == ah) {
+	if (rh == ah) {
             tcg_out_arithi(s, TCG_REG_T2, ah, 1,
-               is_sub ? ARITH_SUB : ARITH_ADD);
+			   is_sub ? ARITH_SUB : ARITH_ADD);
             tcg_out_movcc(s, TCG_COND_LTU, MOVCC_XCC, rh, TCG_REG_T2, 0);
-    } else {
+	} else {
             tcg_out_arithi(s, rh, ah, 1, is_sub ? ARITH_SUB : ARITH_ADD);
-        tcg_out_movcc(s, TCG_COND_GEU, MOVCC_XCC, rh, ah, 0);
-    }
+	    tcg_out_movcc(s, TCG_COND_GEU, MOVCC_XCC, rh, ah, 0);
+	}
     } else {
         /* Otherwise adjust BH as if there is carry into T2 ... */
         if (bhconst) {
@@ -872,7 +869,7 @@ static void tcg_out_addsub2_i64(TCGContext *s, TCGReg rl, TCGReg rh,
         }
         /* ... smoosh T2 back to original BH if carry is clear ... */
         tcg_out_movcc(s, TCG_COND_GEU, MOVCC_XCC, TCG_REG_T2, bh, bhconst);
-    /* ... and finally perform the arithmetic with the new operand.  */
+	/* ... and finally perform the arithmetic with the new operand.  */
         tcg_out_arith(s, rh, ah, TCG_REG_T2, is_sub ? ARITH_SUB : ARITH_ADD);
     }
 
@@ -1022,7 +1019,7 @@ static void build_trampolines(TCGContext *s)
             /* Skip the oi argument.  */
             ra += 1;
         }
-
+                
         /* Set the retaddr operand.  */
         if (ra >= TCG_REG_O6) {
             tcg_out_st(s, TCG_TYPE_PTR, TCG_REG_O7, TCG_REG_CALL_STACK,
@@ -1132,7 +1129,7 @@ static TCGReg tcg_out_tlb_load(TCGContext *s, TCGReg addr, int mem_index,
 
     /* Mask the tlb index.  */
     tcg_out_arithi(s, r1, r1, CPU_TLB_SIZE - 1, ARITH_AND);
-
+    
     /* Mask page, part 2.  */
     tcg_out_arith(s, r0, addr, TCG_REG_T1, ARITH_AND);
 
@@ -1207,7 +1204,7 @@ static void tcg_out_qemu_ld(TCGContext *s, TCGReg data, TCGReg addr,
     tcg_insn_unit *func;
     tcg_insn_unit *label_ptr;
 
-    addrz = tcg_out_tlb_load(s, addr, memi, memop & MO_SIZE,
+    addrz = tcg_out_tlb_load(s, addr, memi, memop,
                              offsetof(CPUTLBEntry, addr_read));
 
     /* The fast path is exactly one insn.  Thus we can perform the
@@ -1274,7 +1271,7 @@ static void tcg_out_qemu_ld(TCGContext *s, TCGReg data, TCGReg addr,
         addr = TCG_REG_T1;
     }
     tcg_out_ldst_rr(s, data, addr,
-                    (GUEST_BASE ? TCG_GUEST_BASE_REG : TCG_REG_G0),
+                    (guest_base ? TCG_GUEST_BASE_REG : TCG_REG_G0),
                     qemu_ld_opc[memop & (MO_BSWAP | MO_SSIZE)]);
 #endif /* CONFIG_SOFTMMU */
 }
@@ -1289,7 +1286,7 @@ static void tcg_out_qemu_st(TCGContext *s, TCGReg data, TCGReg addr,
     tcg_insn_unit *func;
     tcg_insn_unit *label_ptr;
 
-    addrz = tcg_out_tlb_load(s, addr, memi, memop & MO_SIZE,
+    addrz = tcg_out_tlb_load(s, addr, memi, memop,
                              offsetof(CPUTLBEntry, addr_write));
 
     /* The fast path is exactly one insn.  Thus we can perform the entire
@@ -1329,7 +1326,7 @@ static void tcg_out_qemu_st(TCGContext *s, TCGReg data, TCGReg addr,
         addr = TCG_REG_T1;
     }
     tcg_out_ldst_rr(s, data, addr,
-                    (GUEST_BASE ? TCG_GUEST_BASE_REG : TCG_REG_G0),
+                    (guest_base ? TCG_GUEST_BASE_REG : TCG_REG_G0),
                     qemu_st_opc[memop & (MO_BSWAP | MO_SIZE)]);
 #endif /* CONFIG_SOFTMMU */
 }
@@ -1487,11 +1484,11 @@ static void tcg_out_op(TCGContext *s, TCGOpcode opc,
         goto gen_arith;
 
     OP_32_64(neg):
-    c = ARITH_SUB;
-    goto gen_arith1;
+	c = ARITH_SUB;
+	goto gen_arith1;
     OP_32_64(not):
-    c = ARITH_ORN;
-    goto gen_arith1;
+	c = ARITH_ORN;
+	goto gen_arith1;
 
     case INDEX_op_div_i32:
         tcg_out_div32(s, a0, a1, a2, c2, 0);
@@ -1618,8 +1615,8 @@ static void tcg_out_op(TCGContext *s, TCGOpcode opc,
         break;
 
     gen_arith1:
-    tcg_out_arithc(s, a0, TCG_REG_G0, a1, const_args[1], c);
-    break;
+	tcg_out_arithc(s, a0, TCG_REG_G0, a1, const_args[1], c);
+	break;
 
     case INDEX_op_mb:
         tcg_out_mb(s, a0);
@@ -1662,6 +1659,7 @@ static const TCGTargetOpDef *tcg_target_op_def(TCGOpcode op)
     switch (op) {
     case INDEX_op_goto_ptr:
         return &r;
+
     case INDEX_op_ld8u_i32:
     case INDEX_op_ld8s_i32:
     case INDEX_op_ld16u_i32:

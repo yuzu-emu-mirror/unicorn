@@ -55,14 +55,9 @@
 #define TCG_REG_TB      TCG_REG_R12
 #define USE_REG_TB      (!(s390_facilities & FACILITY_GEN_INST_EXT))
 
-#ifdef CONFIG_USE_GUEST_BASE
+#ifndef CONFIG_SOFTMMU
 #define TCG_GUEST_BASE_REG TCG_REG_R13
 #endif
-
-#ifndef GUEST_BASE
-#define GUEST_BASE 0
-#endif
-
 
 /* All of the following instructions are prefixed with their instruction
    format, and are defined as 8- or 16-bit quantities, even when the two
@@ -369,7 +364,6 @@ static void * const qemu_st_helpers[16] = {
 #endif
 
 static tcg_insn_unit *tb_ret_addr;
-
 uint64_t s390_facilities;
 
 static void patch_reloc(tcg_insn_unit *code_ptr, int type,
@@ -1041,6 +1035,7 @@ static void tgen_xori(TCGContext *s, TCGType type, TCGReg dest, uint64_t val)
             return;
         }
     }
+
     /* Use the constant pool if USE_REG_TB, but not for small constants.  */
     if (maybe_out_small_movi(s, type, TCG_TMP0, val)) {
         if (type == TCG_TYPE_I32) {
@@ -1548,7 +1543,6 @@ QEMU_BUILD_BUG_ON(offsetof(CPUArchState, tlb_table[NB_MMU_MODES - 1][1])
 static TCGReg tcg_out_tlb_read(TCGContext* s, TCGReg addr_reg, TCGMemOp opc,
                                int mem_index, bool is_ld)
 {
-    int s_mask = (1 << (opc & MO_SIZE)) - 1;
     unsigned s_bits = opc & MO_SIZE;
     unsigned a_bits = get_alignment_bits(opc);
     unsigned s_mask = (1 << s_bits) - 1;
@@ -1681,9 +1675,9 @@ static void tcg_prepare_user_ldst(TCGContext *s, TCGReg *addr_reg,
         tgen_ext32u(s, TCG_TMP0, *addr_reg);
         *addr_reg = TCG_TMP0;
     }
-    if (GUEST_BASE < 0x80000) {
+    if (guest_base < 0x80000) {
         *index_reg = TCG_REG_NONE;
-        *disp = GUEST_BASE;
+        *disp = guest_base;
     } else {
         *index_reg = TCG_GUEST_BASE_REG;
         *disp = 0;
@@ -1878,7 +1872,6 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc,
         } else {
             tcg_out_insn(s, RRF, SRK, a0, a1, a2);
         }
-        tcg_out_insn(s, RR, SR, args[0], args[2]);
         break;
 
     case INDEX_op_and_i32:
@@ -2321,143 +2314,6 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc,
     }
 }
 
-static const TCGTargetOpDef s390_op_defs[] = {
-    { INDEX_op_exit_tb, { } },
-    { INDEX_op_goto_tb, { } },
-    { INDEX_op_br, { } },
-    { INDEX_op_goto_ptr, { "r" } },
-
-    { INDEX_op_ld8u_i32, { "r", "r" } },
-    { INDEX_op_ld8s_i32, { "r", "r" } },
-    { INDEX_op_ld16u_i32, { "r", "r" } },
-    { INDEX_op_ld16s_i32, { "r", "r" } },
-    { INDEX_op_ld_i32, { "r", "r" } },
-    { INDEX_op_st8_i32, { "r", "r" } },
-    { INDEX_op_st16_i32, { "r", "r" } },
-    { INDEX_op_st_i32, { "r", "r" } },
-
-    { INDEX_op_add_i32, { "r", "r", "ri" } },
-    { INDEX_op_sub_i32, { "r", "0", "ri" } },
-    { INDEX_op_mul_i32, { "r", "0", "rK" } },
-
-    { INDEX_op_div2_i32, { "b", "a", "0", "1", "r" } },
-    { INDEX_op_divu2_i32, { "b", "a", "0", "1", "r" } },
-
-    { INDEX_op_and_i32, { "r", "0", "ri" } },
-    { INDEX_op_or_i32, { "r", "0", "rO" } },
-    { INDEX_op_xor_i32, { "r", "0", "rX" } },
-
-    { INDEX_op_neg_i32, { "r", "r" } },
-
-    { INDEX_op_shl_i32, { "r", "0", "ri" } },
-    { INDEX_op_shr_i32, { "r", "0", "ri" } },
-    { INDEX_op_sar_i32, { "r", "0", "ri" } },
-
-    { INDEX_op_rotl_i32, { "r", "r", "ri" } },
-    { INDEX_op_rotr_i32, { "r", "r", "ri" } },
-
-    { INDEX_op_ext8s_i32, { "r", "r" } },
-    { INDEX_op_ext8u_i32, { "r", "r" } },
-    { INDEX_op_ext16s_i32, { "r", "r" } },
-    { INDEX_op_ext16u_i32, { "r", "r" } },
-
-    { INDEX_op_bswap16_i32, { "r", "r" } },
-    { INDEX_op_bswap32_i32, { "r", "r" } },
-
-    { INDEX_op_clz_i64, { "r", "r", "ri" } },
-
-    { INDEX_op_add2_i32, { "r", "r", "0", "1", "rA", "r" } },
-    { INDEX_op_sub2_i32, { "r", "r", "0", "1", "rA", "r" } },
-
-    { INDEX_op_brcond_i32, { "r", "rC" } },
-    { INDEX_op_setcond_i32, { "r", "r", "rC" } },
-    { INDEX_op_movcond_i32, { "r", "r", "rC", "r", "0" } },
-    { INDEX_op_deposit_i32, { "r", "rZ", "r" } },
-    { INDEX_op_extract_i32, { "r", "r" } },
-
-    { INDEX_op_qemu_ld_i32, { "r", "L" } },
-    { INDEX_op_qemu_ld_i64, { "r", "L" } },
-    { INDEX_op_qemu_st_i32, { "L", "L" } },
-    { INDEX_op_qemu_st_i64, { "L", "L" } },
-
-    { INDEX_op_ld8u_i64, { "r", "r" } },
-    { INDEX_op_ld8s_i64, { "r", "r" } },
-    { INDEX_op_ld16u_i64, { "r", "r" } },
-    { INDEX_op_ld16s_i64, { "r", "r" } },
-    { INDEX_op_ld32u_i64, { "r", "r" } },
-    { INDEX_op_ld32s_i64, { "r", "r" } },
-    { INDEX_op_ld_i64, { "r", "r" } },
-
-    { INDEX_op_st8_i64, { "r", "r" } },
-    { INDEX_op_st16_i64, { "r", "r" } },
-    { INDEX_op_st32_i64, { "r", "r" } },
-    { INDEX_op_st_i64, { "r", "r" } },
-
-    { INDEX_op_add_i64, { "r", "r", "ri" } },
-    { INDEX_op_sub_i64, { "r", "0", "ri" } },
-    { INDEX_op_mul_i64, { "r", "0", "rK" } },
-
-    { INDEX_op_div2_i64, { "b", "a", "0", "1", "r" } },
-    { INDEX_op_divu2_i64, { "b", "a", "0", "1", "r" } },
-    { INDEX_op_mulu2_i64, { "b", "a", "0", "r" } },
-
-    { INDEX_op_and_i64, { "r", "0", "ri" } },
-    { INDEX_op_or_i64, { "r", "0", "rO" } },
-    { INDEX_op_xor_i64, { "r", "0", "rX" } },
-
-    { INDEX_op_neg_i64, { "r", "r" } },
-
-    { INDEX_op_shl_i64, { "r", "r", "ri" } },
-    { INDEX_op_shr_i64, { "r", "r", "ri" } },
-    { INDEX_op_sar_i64, { "r", "r", "ri" } },
-
-    { INDEX_op_rotl_i64, { "r", "r", "ri" } },
-    { INDEX_op_rotr_i64, { "r", "r", "ri" } },
-
-    { INDEX_op_ext8s_i64, { "r", "r" } },
-    { INDEX_op_ext8u_i64, { "r", "r" } },
-    { INDEX_op_ext16s_i64, { "r", "r" } },
-    { INDEX_op_ext16u_i64, { "r", "r" } },
-    { INDEX_op_ext32s_i64, { "r", "r" } },
-    { INDEX_op_ext32u_i64, { "r", "r" } },
-
-    { INDEX_op_ext_i32_i64, { "r", "r" } },
-    { INDEX_op_extu_i32_i64, { "r", "r" } },
-
-    { INDEX_op_bswap16_i64, { "r", "r" } },
-    { INDEX_op_bswap32_i64, { "r", "r" } },
-    { INDEX_op_bswap64_i64, { "r", "r" } },
-
-    { INDEX_op_add2_i64, { "r", "r", "0", "1", "rA", "r" } },
-    { INDEX_op_sub2_i64, { "r", "r", "0", "1", "rA", "r" } },
-
-    { INDEX_op_brcond_i64, { "r", "rC" } },
-    { INDEX_op_setcond_i64, { "r", "r", "rC" } },
-    { INDEX_op_movcond_i64, { "r", "r", "rC", "r", "0" } },
-    { INDEX_op_deposit_i64, { "r", "0", "r" } },
-    { INDEX_op_extract_i64, { "r", "r" } },
-
-    { INDEX_op_mb, { } },
-    { -1 },
-};
-
-static void query_s390_facilities(void)
-{
-    unsigned long hwcap = qemu_getauxval(AT_HWCAP);
-
-    /* Is STORE FACILITY LIST EXTENDED available?  Honestly, I believe this
-       is present on all 64-bit systems, but let's check for it anyway.  */
-    if (hwcap & HWCAP_S390_STFLE) {
-        register int r0 __asm__("0");
-        register void *r1 __asm__("1");
-
-        /* stfle 0(%r1) */
-        r1 = &s390_facilities;
-        asm volatile(".word 0xb2b0,0x1000"
-                     : "=r"(r0) : "0"(0), "r"(r1) : "memory", "cc");
-    }
-}
-
 static const TCGTargetOpDef *tcg_target_op_def(TCGOpcode op)
 {
     static const TCGTargetOpDef r = { 0, { "r" } };
@@ -2465,8 +2321,6 @@ static const TCGTargetOpDef *tcg_target_op_def(TCGOpcode op)
     static const TCGTargetOpDef r_L = { 0, { "r", "L" } };
     static const TCGTargetOpDef L_L = { 0, { "L", "L" } };
     static const TCGTargetOpDef r_ri = { 0, { "r", "ri" } };
-    static const TCGTargetOpDef r_rC = { 0, { "r", "rC" } };
-    static const TCGTargetOpDef r_rZ = { 0, { "r", "rZ" } };
     static const TCGTargetOpDef r_r_ri = { 0, { "r", "r", "ri" } };
     static const TCGTargetOpDef r_0_ri = { 0, { "r", "0", "ri" } };
     static const TCGTargetOpDef r_0_rI = { 0, { "r", "0", "rI" } };
@@ -2538,10 +2392,8 @@ static const TCGTargetOpDef *tcg_target_op_def(TCGOpcode op)
         return &r_r_ri;
 
     case INDEX_op_brcond_i32:
-        /* Without EXT_IMM, only the LOAD AND TEST insn is available.  */
-        return (s390_facilities & FACILITY_EXT_IMM ? &r_ri : &r_rZ);
     case INDEX_op_brcond_i64:
-        return (s390_facilities & FACILITY_EXT_IMM ? &r_rC : &r_rZ);
+        return &r_ri;
 
     case INDEX_op_bswap16_i32:
     case INDEX_op_bswap16_i64:
@@ -2567,6 +2419,8 @@ static const TCGTargetOpDef *tcg_target_op_def(TCGOpcode op)
         return &r_r;
 
     case INDEX_op_clz_i64:
+    case INDEX_op_setcond_i32:
+    case INDEX_op_setcond_i64:
         return &r_r_ri;
 
     case INDEX_op_qemu_ld_i32:
@@ -2575,31 +2429,19 @@ static const TCGTargetOpDef *tcg_target_op_def(TCGOpcode op)
     case INDEX_op_qemu_st_i64:
     case INDEX_op_qemu_st_i32:
         return &L_L;
+
     case INDEX_op_deposit_i32:
     case INDEX_op_deposit_i64:
         {
             static const TCGTargetOpDef dep = { 0, { "r", "rZ", "r" } };
             return &dep;
         }
-    case INDEX_op_setcond_i32:
-    case INDEX_op_setcond_i64:
-        {
-            /* Without EXT_IMM, only the LOAD AND TEST insn is available.  */
-            static const TCGTargetOpDef setc_z = { 0, { "r", "r", "rZ" } };
-            static const TCGTargetOpDef setc_c = { 0, { "r", "r", "rC" } };
-            return (s390_facilities & FACILITY_EXT_IMM ? &setc_c : &setc_z);
-        }
     case INDEX_op_movcond_i32:
     case INDEX_op_movcond_i64:
         {
-            /* Without EXT_IMM, only the LOAD AND TEST insn is available.  */
-            static const TCGTargetOpDef movc_z = { 0, { "r", "r", "rZ", "r", "0" } };
-            static const TCGTargetOpDef movc_c = { 0, { "r", "r", "rC", "r", "0" } };
-            static const TCGTargetOpDef movc_l = { 0, { "r", "r", "rC", "rI", "0" } };
-            return (s390_facilities & FACILITY_EXT_IMM
-                    ? (s390_facilities & FACILITY_LOAD_ON_COND2
-                       ? &movc_l : &movc_c)
-                    : &movc_z);
+            static const TCGTargetOpDef movc = { 0, { "r", "r", "ri", "r", "0" } };
+            static const TCGTargetOpDef movc_l = { 0, { "r", "r", "ri", "rI", "0" } };
+            return (s390_facilities & FACILITY_LOAD_ON_COND2 ? &movc_l : &movc);
         }
     case INDEX_op_div2_i32:
     case INDEX_op_div2_i64:
@@ -2626,6 +2468,23 @@ static const TCGTargetOpDef *tcg_target_op_def(TCGOpcode op)
         break;
     }
     return NULL;
+}
+
+static void query_s390_facilities(void)
+{
+    unsigned long hwcap = qemu_getauxval(AT_HWCAP);
+
+    /* Is STORE FACILITY LIST EXTENDED available?  Honestly, I believe this
+       is present on all 64-bit systems, but let's check for it anyway.  */
+    if (hwcap & HWCAP_S390_STFLE) {
+        register int r0 __asm__("0");
+        register void *r1 __asm__("1");
+
+        /* stfle 0(%r1) */
+        r1 = &s390_facilities;
+        asm volatile(".word 0xb2b0,0x1000"
+                     : "=r"(r0) : "0"(0), "r"(r1) : "memory", "cc");
+    }
 }
 
 static void tcg_target_init(TCGContext *s)
@@ -2682,12 +2541,13 @@ static void tcg_target_qemu_prologue(TCGContext *s)
 #endif
 
     tcg_out_mov(s, TCG_TYPE_PTR, TCG_AREG0, tcg_target_call_iarg_regs[0]);
-    /* br %r3 (go to TB) */
-    tcg_out_insn(s, RR, BCR, S390_CC_ALWAYS, tcg_target_call_iarg_regs[1]);
     if (USE_REG_TB) {
         tcg_out_mov(s, TCG_TYPE_PTR, TCG_REG_TB,
                     tcg_target_call_iarg_regs[1]);
     }
+
+    /* br %r3 (go to TB) */
+    tcg_out_insn(s, RR, BCR, S390_CC_ALWAYS, tcg_target_call_iarg_regs[1]);
 
     /*
      * Return path for goto_ptr. Set return value to 0, a-la exit_tb,

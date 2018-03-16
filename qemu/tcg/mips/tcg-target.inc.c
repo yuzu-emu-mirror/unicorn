@@ -649,11 +649,6 @@ static void tcg_out_bswap32(TCGContext *s, TCGReg ret, TCGReg arg)
         tcg_out_opc_reg(s, OPC_WSBH, ret, 0, arg);
         tcg_out_opc_sa(s, OPC_ROTR, ret, ret, 16);
     } else {
-        /* ret and arg must be different and can't be register at */
-        if (ret == arg || ret == TCG_TMP0 || arg == TCG_TMP0) {
-            tcg_abort();
-        }
-
         tcg_out_bswap_subr(s, bswap32_addr);
         /* delay slot -- never omit the insn, like tcg_out_mov might.  */
         tcg_out_opc_reg(s, OPC_OR, TCG_TMP0, arg, TCG_REG_ZERO);
@@ -760,6 +755,55 @@ static inline bool tcg_out_sti(TCGContext *s, TCGType type, TCGArg val,
         return true;
     }
     return false;
+}
+
+static void tcg_out_addsub2(TCGContext *s, TCGReg rl, TCGReg rh, TCGReg al,
+                            TCGReg ah, TCGArg bl, TCGArg bh, bool cbl,
+                            bool cbh, bool is_sub)
+{
+    TCGReg th = TCG_TMP1;
+
+    /* If we have a negative constant such that negating it would
+       make the high part zero, we can (usually) eliminate one insn.  */
+    if (cbl && cbh && bh == -1 && bl != 0) {
+        bl = -bl;
+        bh = 0;
+        is_sub = !is_sub;
+    }
+
+    /* By operating on the high part first, we get to use the final
+       carry operation to move back from the temporary.  */
+    if (!cbh) {
+        tcg_out_opc_reg(s, (is_sub ? OPC_SUBU : OPC_ADDU), th, ah, bh);
+    } else if (bh != 0 || ah == rl) {
+        tcg_out_opc_imm(s, OPC_ADDIU, th, ah, (is_sub ? -bh : bh));
+    } else {
+        th = ah;
+    }
+
+    /* Note that tcg optimization should eliminate the bl == 0 case.  */
+    if (is_sub) {
+        if (cbl) {
+            tcg_out_opc_imm(s, OPC_SLTIU, TCG_TMP0, al, bl);
+            tcg_out_opc_imm(s, OPC_ADDIU, rl, al, -bl);
+        } else {
+            tcg_out_opc_reg(s, OPC_SLTU, TCG_TMP0, al, bl);
+            tcg_out_opc_reg(s, OPC_SUBU, rl, al, bl);
+        }
+        tcg_out_opc_reg(s, OPC_SUBU, rh, th, TCG_TMP0);
+    } else {
+        if (cbl) {
+            tcg_out_opc_imm(s, OPC_ADDIU, rl, al, bl);
+            tcg_out_opc_imm(s, OPC_SLTIU, TCG_TMP0, rl, bl);
+        } else if (rl == al && rl == bl) {
+            tcg_out_opc_sa(s, OPC_SRL, TCG_TMP0, al, 31);
+            tcg_out_opc_reg(s, OPC_ADDU, rl, al, bl);
+        } else {
+            tcg_out_opc_reg(s, OPC_ADDU, rl, al, bl);
+            tcg_out_opc_reg(s, OPC_SLTU, TCG_TMP0, rl, (rl == bl ? al : bl));
+        }
+        tcg_out_opc_reg(s, OPC_ADDU, rh, th, TCG_TMP0);
+    }
 }
 
 /* Bit 0 set if inversion required; bit 1 set if swapping required.  */
@@ -1271,7 +1315,7 @@ static void add_qemu_ldst_label(TCGContext *s, int is_ld, TCGMemOpIdx oi,
 
 static void tcg_out_qemu_ld_slow_path(TCGContext *s, TCGLabelQemuLdst *l)
 {
-    TCGMemOpIdx oi = lb->oi;
+    TCGMemOpIdx oi = l->oi;
     TCGMemOp opc = get_memop(oi);
     TCGReg v0;
     int i;
@@ -1319,7 +1363,7 @@ static void tcg_out_qemu_ld_slow_path(TCGContext *s, TCGLabelQemuLdst *l)
 
 static void tcg_out_qemu_st_slow_path(TCGContext *s, TCGLabelQemuLdst *l)
 {
-    TCGMemOpIdx oi = lb->oi;
+    TCGMemOpIdx oi = l->oi;
     TCGMemOp opc = get_memop(oi);
     TCGMemOp s_bits = opc & MO_SIZE;
     int i;
@@ -1424,6 +1468,7 @@ static void tcg_out_qemu_ld_direct(TCGContext *s, TCGReg lo, TCGReg hi,
         }
         /* FALLTHRU */
     case MO_SL:
+        tcg_out_opc_imm(s, OPC_LW, lo, base, 0);
         break;
     case MO_Q | MO_BSWAP:
         if (TCG_TARGET_REG_BITS == 64) {
@@ -1574,55 +1619,6 @@ static void tcg_out_qemu_st_direct(TCGContext *s, TCGReg lo, TCGReg hi,
     }
 }
 
-static void tcg_out_addsub2(TCGContext *s, TCGReg rl, TCGReg rh, TCGReg al,
-                            TCGReg ah, TCGArg bl, TCGArg bh, bool cbl,
-                            bool cbh, bool is_sub)
-{
-    TCGReg th = TCG_TMP1;
-
-    /* If we have a negative constant such that negating it would
-       make the high part zero, we can (usually) eliminate one insn.  */
-    if (cbl && cbh && bh == -1 && bl != 0) {
-        bl = -bl;
-        bh = 0;
-        is_sub = !is_sub;
-    }
-
-    /* By operating on the high part first, we get to use the final
-       carry operation to move back from the temporary.  */
-    if (!cbh) {
-        tcg_out_opc_reg(s, (is_sub ? OPC_SUBU : OPC_ADDU), th, ah, bh);
-    } else if (bh != 0 || ah == rl) {
-        tcg_out_opc_imm(s, OPC_ADDIU, th, ah, (is_sub ? -bh : bh));
-    } else {
-        th = ah;
-    }
-
-    /* Note that tcg optimization should eliminate the bl == 0 case.  */
-    if (is_sub) {
-        if (cbl) {
-            tcg_out_opc_imm(s, OPC_SLTIU, TCG_TMP0, al, bl);
-            tcg_out_opc_imm(s, OPC_ADDIU, rl, al, -bl);
-        } else {
-            tcg_out_opc_reg(s, OPC_SLTU, TCG_TMP0, al, bl);
-            tcg_out_opc_reg(s, OPC_SUBU, rl, al, bl);
-        }
-        tcg_out_opc_reg(s, OPC_SUBU, rh, th, TCG_TMP0);
-    } else {
-        if (cbl) {
-            tcg_out_opc_imm(s, OPC_ADDIU, rl, al, bl);
-            tcg_out_opc_imm(s, OPC_SLTIU, TCG_TMP0, rl, bl);
-        } else if (rl == al && rl == bl) {
-            tcg_out_opc_sa(s, OPC_SRL, TCG_TMP0, al, 31);
-            tcg_out_opc_reg(s, OPC_ADDU, rl, al, bl);
-        } else {
-            tcg_out_opc_reg(s, OPC_ADDU, rl, al, bl);
-            tcg_out_opc_reg(s, OPC_SLTU, TCG_TMP0, rl, (rl == bl ? al : bl));
-        }
-        tcg_out_opc_reg(s, OPC_ADDU, rh, th, TCG_TMP0);
-    }
-}
-
 static void tcg_out_qemu_st(TCGContext *s, const TCGArg *args, bool is_64)
 {
     TCGReg addr_regl, addr_regh QEMU_UNUSED_VAR;
@@ -1671,22 +1667,12 @@ static void tcg_out_mb(TCGContext *s, TCGArg a0)
         /* Note that SYNC_MB is a slightly weaker than SYNC 0,
            as the former is an ordering barrier and the latter
            is a completion barrier.  */
-        OPC_SYNC_MB,
-        OPC_SYNC_RMB,
-        OPC_SYNC_MB,
-        OPC_SYNC_MB,
-        OPC_SYNC_RELEASE,
-        OPC_SYNC_ACQUIRE,
-        OPC_SYNC_MB,
-        OPC_SYNC_MB,
-        OPC_SYNC_WMB,
-        OPC_SYNC_MB,
-        OPC_SYNC_MB,
-        OPC_SYNC_MB,
-        OPC_SYNC_RELEASE,
-        OPC_SYNC_MB,
-        OPC_SYNC_MB,
-        OPC_SYNC_MB,
+        [0 ... TCG_MO_ALL]            = OPC_SYNC_MB,
+        [TCG_MO_LD_LD]                = OPC_SYNC_RMB,
+        [TCG_MO_ST_ST]                = OPC_SYNC_WMB,
+        [TCG_MO_LD_ST]                = OPC_SYNC_RELEASE,
+        [TCG_MO_LD_ST | TCG_MO_ST_ST] = OPC_SYNC_RELEASE,
+        [TCG_MO_LD_ST | TCG_MO_LD_LD] = OPC_SYNC_ACQUIRE,
     };
     tcg_out32(s, sync[a0 & TCG_MO_ALL]);
 }
@@ -2062,7 +2048,6 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc,
             tcg_out_opc_reg(s, OPC_ROTRV, a0, TCG_TMP0, a1);
         }
         break;
-
     case INDEX_op_sar_i64:
         if (c2) {
             tcg_out_dsra(s, a0, a1, a2);
@@ -2210,6 +2195,7 @@ static const TCGTargetOpDef *tcg_target_op_def(TCGOpcode op)
     switch (op) {
     case INDEX_op_goto_ptr:
         return &r;
+
     case INDEX_op_ld8u_i32:
     case INDEX_op_ld8s_i32:
     case INDEX_op_ld16u_i32:
@@ -2357,7 +2343,6 @@ static const int tcg_target_callee_save_regs[] = {
 /* The Linux kernel doesn't provide any information about the available
    instruction set. Probe it using a signal handler. */
 
-#include <signal.h>
 
 #ifndef use_movnz_instructions
 bool use_movnz_instructions = false;

@@ -89,14 +89,14 @@ static const int tcg_target_call_oarg_regs[2] = {
 enum arm_cond_code_e {
     COND_EQ = 0x0,
     COND_NE = 0x1,
-    COND_CS = 0x2,  /* Unsigned greater or equal */
-    COND_CC = 0x3,  /* Unsigned less than */
-    COND_MI = 0x4,  /* Negative */
-    COND_PL = 0x5,  /* Zero or greater */
-    COND_VS = 0x6,  /* Overflow */
-    COND_VC = 0x7,  /* No overflow */
-    COND_HI = 0x8,  /* Unsigned greater than */
-    COND_LS = 0x9,  /* Unsigned less or equal */
+    COND_CS = 0x2,	/* Unsigned greater or equal */
+    COND_CC = 0x3,	/* Unsigned less than */
+    COND_MI = 0x4,	/* Negative */
+    COND_PL = 0x5,	/* Zero or greater */
+    COND_VS = 0x6,	/* Overflow */
+    COND_VC = 0x7,	/* No overflow */
+    COND_HI = 0x8,	/* Unsigned greater than */
+    COND_LS = 0x9,	/* Unsigned less or equal */
     COND_GE = 0xa,
     COND_LT = 0xb,
     COND_GT = 0xc,
@@ -106,14 +106,14 @@ enum arm_cond_code_e {
 
 #define TO_CPSR (1 << 20)
 
-#define SHIFT_IMM_LSL(im)   (((im) << 7) | 0x00)
-#define SHIFT_IMM_LSR(im)   (((im) << 7) | 0x20)
-#define SHIFT_IMM_ASR(im)   (((im) << 7) | 0x40)
-#define SHIFT_IMM_ROR(im)   (((im) << 7) | 0x60)
-#define SHIFT_REG_LSL(rs)   (((rs) << 8) | 0x10)
-#define SHIFT_REG_LSR(rs)   (((rs) << 8) | 0x30)
-#define SHIFT_REG_ASR(rs)   (((rs) << 8) | 0x50)
-#define SHIFT_REG_ROR(rs)   (((rs) << 8) | 0x70)
+#define SHIFT_IMM_LSL(im)	(((im) << 7) | 0x00)
+#define SHIFT_IMM_LSR(im)	(((im) << 7) | 0x20)
+#define SHIFT_IMM_ASR(im)	(((im) << 7) | 0x40)
+#define SHIFT_IMM_ROR(im)	(((im) << 7) | 0x60)
+#define SHIFT_REG_LSL(rs)	(((rs) << 8) | 0x10)
+#define SHIFT_REG_LSR(rs)	(((rs) << 8) | 0x30)
+#define SHIFT_REG_ASR(rs)	(((rs) << 8) | 0x50)
+#define SHIFT_REG_ROR(rs)	(((rs) << 8) | 0x70)
 
 typedef enum {
     ARITH_AND = 0x0 << 21,
@@ -1242,7 +1242,7 @@ static TCGReg tcg_out_arg_reg64(TCGContext *s, TCGReg argreg,
     }
 }
 
-#define TLB_SHIFT   (CPU_TLB_ENTRY_BITS + CPU_TLB_BITS)
+#define TLB_SHIFT	(CPU_TLB_ENTRY_BITS + CPU_TLB_BITS)
 
 /* We're expecting to use an 8-bit immediate and to mask.  */
 QEMU_BUILD_BUG_ON(CPU_TLB_BITS > 8);
@@ -2026,6 +2026,7 @@ static inline void tcg_out_op(TCGContext *s, TCGOpcode opc,
         tcg_out_dat_imm(s, tcg_cond_to_arm_cond[tcg_invert_cond(args[3])],
                         ARITH_MOV, args[0], 0, 0);
         break;
+
     case INDEX_op_brcond2_i32:
         c = tcg_out_cmp2(s, args, const_args);
         tcg_out_goto_label(s, tcg_cond_to_arm_cond[c], arg_label(args[5]));
@@ -2125,6 +2126,7 @@ static const TCGTargetOpDef *tcg_target_op_def(TCGOpcode op)
     switch (op) {
     case INDEX_op_goto_ptr:
         return &r;
+
     case INDEX_op_ld8u_i32:
     case INDEX_op_ld8s_i32:
     case INDEX_op_ld16u_i32:
@@ -2143,6 +2145,7 @@ static const TCGTargetOpDef *tcg_target_op_def(TCGOpcode op)
     case INDEX_op_extract_i32:
     case INDEX_op_sextract_i32:
         return &r_r;
+
     case INDEX_op_add_i32:
     case INDEX_op_sub_i32:
     case INDEX_op_setcond_i32:
@@ -2168,6 +2171,7 @@ static const TCGTargetOpDef *tcg_target_op_def(TCGOpcode op)
     case INDEX_op_rotl_i32:
     case INDEX_op_rotr_i32:
         return &r_r_ri;
+
     case INDEX_op_brcond_i32:
         return &br;
     case INDEX_op_deposit_i32:
@@ -2182,6 +2186,7 @@ static const TCGTargetOpDef *tcg_target_op_def(TCGOpcode op)
         return &br2;
     case INDEX_op_setcond2_i32:
         return &setc2;
+
     case INDEX_op_qemu_ld_i32:
         return TARGET_LONG_BITS == 32 ? &r_l : &r_l_l;
     case INDEX_op_qemu_ld_i64:
@@ -2190,6 +2195,7 @@ static const TCGTargetOpDef *tcg_target_op_def(TCGOpcode op)
         return TARGET_LONG_BITS == 32 ? &s_s : &s_s_s;
     case INDEX_op_qemu_st_i64:
         return TARGET_LONG_BITS == 32 ? &s_s_s : &s_s_s_s;
+
     default:
         return NULL;
     }
