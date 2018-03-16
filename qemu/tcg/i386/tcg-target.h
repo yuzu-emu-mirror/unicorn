@@ -89,7 +89,7 @@ typedef enum {
 /* used for function call generation */
 #define TCG_REG_CALL_STACK TCG_REG_ESP 
 #define TCG_TARGET_STACK_ALIGN 16
-#if defined(_WIN64) || (defined(__CYGWIN__) && defined(__x86_64__))
+#if defined(_WIN64)
 #define TCG_TARGET_CALL_STACK_OFFSET 32
 #else
 #define TCG_TARGET_CALL_STACK_OFFSET 0
@@ -99,39 +99,6 @@ extern bool have_bmi1;
 extern bool have_popcnt;
 extern bool have_avx1;
 extern bool have_avx2;
-
-// UNICORN FIXME:
-// Taken from cpuid.h in mainline qemu.
-// The cpuid mechanism should just be
-// backported instead
-
-/* Leaf 1, %ecx */
-#ifndef bit_SSE4_1
-#define bit_SSE4_1      (1 << 19)
-#endif
-#ifndef bit_MOVBE
-#define bit_MOVBE       (1 << 22)
-#endif
-#ifndef bit_OSXSAVE
-#define bit_OSXSAVE     (1 << 27)
-#endif
-#ifndef bit_AVX
-#define bit_AVX         (1 << 28)
-#endif
-/* Leaf 7, %ebx */
-#ifndef bit_BMI
-#define bit_BMI         (1 << 3)
-#endif
-#ifndef bit_AVX2
-#define bit_AVX2        (1 << 5)
-#endif
-#ifndef bit_BMI2
-#define bit_BMI2        (1 << 8)
-#endif
-/* Leaf 0x80000001, %ecx */
-#ifndef bit_LZCNT
-#define bit_LZCNT       (1 << 5)
-#endif
 
 /* optional instructions */
 #define TCG_TARGET_HAS_div2_i32         1
