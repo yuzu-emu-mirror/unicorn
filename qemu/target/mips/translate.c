@@ -2092,7 +2092,7 @@ OP_LD_ATOMIC(lld,ld64);
 static inline void op_st_##insn(TCGv arg1, TCGv arg2, int rt, int mem_idx,                  \
                                 DisasContext *ctx)                                          \
 {                                                                                           \
-    struct uc_struct *uc = ctx->uc;
+    struct uc_struct *uc = ctx->uc;                                                         \
     TCGContext *tcg_ctx = uc->tcg_ctx;                                                      \
     TCGv t0 = tcg_temp_new(tcg_ctx);                                                        \
     TCGLabel *l1 = gen_new_label(tcg_ctx);                                                  \
