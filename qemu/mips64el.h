@@ -217,7 +217,6 @@
 #define clz32 clz32_mips64el
 #define clz64 clz64_mips64el
 #define cmp_flatrange_addr cmp_flatrange_addr_mips64el
-#define code_gen_alloc code_gen_alloc_mips64el
 #define commonNaNToFloat128 commonNaNToFloat128_mips64el
 #define commonNaNToFloat16 commonNaNToFloat16_mips64el
 #define commonNaNToFloat32 commonNaNToFloat32_mips64el
@@ -281,7 +280,6 @@
 #define cpu_exec_init_all cpu_exec_init_all_mips64el
 #define cpu_exec_step_atomic cpu_exec_step_atomic_mips64el
 #define cpu_flush_icache_range cpu_flush_icache_range_mips64el
-#define cpu_gen_init cpu_gen_init_mips64el
 #define cpu_get_address_space cpu_get_address_space_mips64el
 #define cpu_get_clock cpu_get_clock_mips64el
 #define cpu_get_real_ticks cpu_get_real_ticks_mips64el

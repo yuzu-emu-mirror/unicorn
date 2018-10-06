@@ -1659,6 +1659,15 @@ case "$target_name" in
     TARGET_BASE_ARCH=ppc
     echo "TARGET_ABI32=y" >> $config_target_mak
   ;;
+  riscv32)
+    TARGET_BASE_ARCH=riscv
+    TARGET_ABI_DIR=riscv
+    echo "TARGET_ABI32=y" >> $config_target_mak
+  ;;
+  riscv64)
+    TARGET_BASE_ARCH=riscv
+    TARGET_ABI_DIR=riscv
+  ;;
   sh4|sh4eb)
     TARGET_ARCH=sh4
     bflt="yes"

@@ -844,7 +844,7 @@ struct TCGContext {
     struct tcg_temp_info temps2[TCG_MAX_TEMPS];
     TCGTempSet temps2_used;
 
-    /* qemu/target-m68k/translate.c */
+    /* qemu/target/m68k/translate.c */
     TCGv_i32 cpu_halted;
     char cpu_reg_names[2 * 8 * 3 + 5 * 4];
     TCGv cpu_dregs[8];
@@ -865,20 +865,20 @@ struct TCGContext {
     /* Used to distinguish stores from bad addressing modes.  */
     TCGv store_dummy;
 
-    /* qemu/target-arm/translate.c */
+    /* qemu/target/arm/translate.c */
     /* We reuse the same 64-bit temporaries for efficiency.  */
     TCGv_i32 cpu_R[16];
     TCGv_i32 cpu_CF, cpu_NF, cpu_VF, cpu_ZF;
     TCGv_i64 cpu_exclusive_addr;
     TCGv_i64 cpu_exclusive_val;
 
-    /* qemu/target-arm/translate-a64.c */
+    /* qemu/target/arm/translate-a64.c */
     TCGv_i64 cpu_pc;
     /* Load/store exclusive handling */
     TCGv_i64 cpu_exclusive_high;
     TCGv_i64 cpu_X[32];
 
-    /* qemu/target-mips/translate.c */
+    /* qemu/target/mips/translate.c */
     /* global register indices */
     TCGv cpu_gpr[32];
     TCGv cpu_PC;
@@ -891,7 +891,14 @@ struct TCGContext {
     TCGv_i64 fpu_f64[32];
     TCGv_i64 msa_wr_d[64];
 
-    /* qemu/target-sparc/translate.c */
+    /* qemu/target/riscv/translate.c */
+    TCGv riscv_cpu_gpr[32];
+    TCGv riscv_cpu_pc;
+    TCGv_i64 riscv_cpu_fpr[32]; /* assume F and D extensions */
+    TCGv load_res;
+    TCGv load_val;
+
+    /* qemu/target/sparc/translate.c */
     /* global register indexes */
     TCGv_ptr cpu_regwptr;
     TCGv_i32 cpu_psr;

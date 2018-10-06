@@ -217,7 +217,6 @@
 #define clz32 clz32_m68k
 #define clz64 clz64_m68k
 #define cmp_flatrange_addr cmp_flatrange_addr_m68k
-#define code_gen_alloc code_gen_alloc_m68k
 #define commonNaNToFloat128 commonNaNToFloat128_m68k
 #define commonNaNToFloat16 commonNaNToFloat16_m68k
 #define commonNaNToFloat32 commonNaNToFloat32_m68k
@@ -281,7 +280,6 @@
 #define cpu_exec_init_all cpu_exec_init_all_m68k
 #define cpu_exec_step_atomic cpu_exec_step_atomic_m68k
 #define cpu_flush_icache_range cpu_flush_icache_range_m68k
-#define cpu_gen_init cpu_gen_init_m68k
 #define cpu_get_address_space cpu_get_address_space_m68k
 #define cpu_get_clock cpu_get_clock_m68k
 #define cpu_get_real_ticks cpu_get_real_ticks_m68k

@@ -217,7 +217,6 @@
 #define clz32 clz32_powerpc
 #define clz64 clz64_powerpc
 #define cmp_flatrange_addr cmp_flatrange_addr_powerpc
-#define code_gen_alloc code_gen_alloc_powerpc
 #define commonNaNToFloat128 commonNaNToFloat128_powerpc
 #define commonNaNToFloat16 commonNaNToFloat16_powerpc
 #define commonNaNToFloat32 commonNaNToFloat32_powerpc
@@ -281,7 +280,6 @@
 #define cpu_exec_init_all cpu_exec_init_all_powerpc
 #define cpu_exec_step_atomic cpu_exec_step_atomic_powerpc
 #define cpu_flush_icache_range cpu_flush_icache_range_powerpc
-#define cpu_gen_init cpu_gen_init_powerpc
 #define cpu_get_address_space cpu_get_address_space_powerpc
 #define cpu_get_clock cpu_get_clock_powerpc
 #define cpu_get_real_ticks cpu_get_real_ticks_powerpc

@@ -20,6 +20,7 @@
 #include "qemu/target/i386/unicorn.h"
 #include "qemu/target/m68k/unicorn.h"
 #include "qemu/target/mips/unicorn.h"
+#include "qemu/target/riscv/unicorn.h"
 #include "qemu/target/sparc/unicorn.h"
 
 #include "qemu/include/hw/boards.h"
@@ -124,6 +125,9 @@ bool uc_arch_supported(uc_arch arch)
 #endif
 #ifdef UNICORN_HAS_PPC
         case UC_ARCH_PPC:   return true;
+#endif
+#ifdef UNICORN_HAS_RISCV
+        case UC_ARCH_RISCV: return true;
 #endif
 #ifdef UNICORN_HAS_SPARC
         case UC_ARCH_SPARC: return true;
@@ -246,6 +250,24 @@ uc_err uc_open(uc_arch arch, uc_mode mode, uc_engine **result)
                 }
                 break;
 #endif
+
+#ifdef UNICORN_HAS_RISCV
+            case UC_ARCH_RISCV:
+                if (mode & ~UC_MODE_RISCV_MASK) {
+                    free(uc);
+                    return UC_ERR_MODE;
+                }
+                if (mode & UC_MODE_RISCV64) {
+#ifdef UNICORN_HAS_RISCV64
+                    uc->init_arch = riscv64_uc_init;
+#endif
+                } else {
+#ifdef UNICORN_HAS_RISCV32
+                    uc->init_arch = riscv32_uc_init;
+#endif
+                }
+                break;
+#endif /* UNICORN_HAS_RISCV */
 
 #ifdef UNICORN_HAS_SPARC
             case UC_ARCH_SPARC:
@@ -583,6 +605,11 @@ uc_err uc_emu_start(uc_engine* uc, uint64_t begin, uint64_t until, uint64_t time
         case UC_ARCH_MIPS:
             // TODO: MIPS32/MIPS64/BIGENDIAN etc
             uc_reg_write(uc, UC_MIPS_REG_PC, &begin);
+            break;
+#endif
+#ifdef UNICORN_HAS_RISCV
+        case UC_ARCH_RISCV:
+            uc_reg_write(uc, UC_RISCV_REG_PC, &begin);
             break;
 #endif
 #ifdef UNICORN_HAS_SPARC
@@ -1211,16 +1238,20 @@ static size_t cpu_context_size(uc_arch arch, uc_mode mode)
     // of the interesting CPU registers
     switch (arch) {
 #ifdef UNICORN_HAS_M68K
-        case UC_ARCH_M68K:  return M68K_REGS_STORAGE_SIZE;
+        case UC_ARCH_M68K:
+            return M68K_REGS_STORAGE_SIZE;
 #endif
 #ifdef UNICORN_HAS_X86
-        case UC_ARCH_X86:   return X86_REGS_STORAGE_SIZE;
+        case UC_ARCH_X86:
+            return X86_REGS_STORAGE_SIZE;
 #endif
 #ifdef UNICORN_HAS_ARM
-        case UC_ARCH_ARM:   return mode & UC_MODE_BIG_ENDIAN ? ARM_REGS_STORAGE_SIZE_armeb : ARM_REGS_STORAGE_SIZE_arm;
+        case UC_ARCH_ARM:
+            return mode & UC_MODE_BIG_ENDIAN ? ARM_REGS_STORAGE_SIZE_armeb : ARM_REGS_STORAGE_SIZE_arm;
 #endif
 #ifdef UNICORN_HAS_ARM64
-        case UC_ARCH_ARM64: return mode & UC_MODE_BIG_ENDIAN ? ARM64_REGS_STORAGE_SIZE_aarch64eb : ARM64_REGS_STORAGE_SIZE_aarch64;
+        case UC_ARCH_ARM64:
+            return mode & UC_MODE_BIG_ENDIAN ? ARM64_REGS_STORAGE_SIZE_aarch64eb : ARM64_REGS_STORAGE_SIZE_aarch64;
 #endif
 #ifdef UNICORN_HAS_MIPS
         case UC_ARCH_MIPS:
@@ -1238,10 +1269,19 @@ static size_t cpu_context_size(uc_arch arch, uc_mode mode)
                 }
             }
 #endif
-#ifdef UNICORN_HAS_SPARC
-        case UC_ARCH_SPARC: return mode & UC_MODE_SPARC64 ? SPARC64_REGS_STORAGE_SIZE : SPARC_REGS_STORAGE_SIZE;
+#ifdef UNICORN_HAS_RISCV
+        case UC_ARCH_RISCV:
+            if (mode & UC_MODE_RISCV64) {
+                return RISCV64_REGS_STORAGE_SIZE_riscv64;
+            }
+            return RISCV32_REGS_STORAGE_SIZE_riscv32;
 #endif
-        default: return 0;
+#ifdef UNICORN_HAS_SPARC
+        case UC_ARCH_SPARC:
+            return mode & UC_MODE_SPARC64 ? SPARC64_REGS_STORAGE_SIZE : SPARC_REGS_STORAGE_SIZE;
+#endif
+        default:
+            return 0;
     }
 }
 

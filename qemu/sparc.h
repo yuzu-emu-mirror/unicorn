@@ -217,7 +217,6 @@
 #define clz32 clz32_sparc
 #define clz64 clz64_sparc
 #define cmp_flatrange_addr cmp_flatrange_addr_sparc
-#define code_gen_alloc code_gen_alloc_sparc
 #define commonNaNToFloat128 commonNaNToFloat128_sparc
 #define commonNaNToFloat16 commonNaNToFloat16_sparc
 #define commonNaNToFloat32 commonNaNToFloat32_sparc
@@ -281,7 +280,6 @@
 #define cpu_exec_init_all cpu_exec_init_all_sparc
 #define cpu_exec_step_atomic cpu_exec_step_atomic_sparc
 #define cpu_flush_icache_range cpu_flush_icache_range_sparc
-#define cpu_gen_init cpu_gen_init_sparc
 #define cpu_get_address_space cpu_get_address_space_sparc
 #define cpu_get_clock cpu_get_clock_sparc
 #define cpu_get_real_ticks cpu_get_real_ticks_sparc

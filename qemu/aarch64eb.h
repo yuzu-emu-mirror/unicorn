@@ -217,7 +217,6 @@
 #define clz32 clz32_aarch64eb
 #define clz64 clz64_aarch64eb
 #define cmp_flatrange_addr cmp_flatrange_addr_aarch64eb
-#define code_gen_alloc code_gen_alloc_aarch64eb
 #define commonNaNToFloat128 commonNaNToFloat128_aarch64eb
 #define commonNaNToFloat16 commonNaNToFloat16_aarch64eb
 #define commonNaNToFloat32 commonNaNToFloat32_aarch64eb
@@ -281,7 +280,6 @@
 #define cpu_exec_init_all cpu_exec_init_all_aarch64eb
 #define cpu_exec_step_atomic cpu_exec_step_atomic_aarch64eb
 #define cpu_flush_icache_range cpu_flush_icache_range_aarch64eb
-#define cpu_gen_init cpu_gen_init_aarch64eb
 #define cpu_get_address_space cpu_get_address_space_aarch64eb
 #define cpu_get_clock cpu_get_clock_aarch64eb
 #define cpu_get_real_ticks cpu_get_real_ticks_aarch64eb

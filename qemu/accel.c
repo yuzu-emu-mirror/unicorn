@@ -36,7 +36,6 @@
 #define TCG_TB_SIZE 0
 
 static bool tcg_allowed = true;
-static int tcg_init(MachineState *ms);
 static AccelClass *accel_find(struct uc_struct *uc, const char *opt_name);
 static int accel_init_machine(AccelClass *acc, MachineState *ms);
 static void tcg_accel_class_init(struct uc_struct *uc, ObjectClass *oc, void *data);

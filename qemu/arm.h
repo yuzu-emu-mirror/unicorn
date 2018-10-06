@@ -217,7 +217,6 @@
 #define clz32 clz32_arm
 #define clz64 clz64_arm
 #define cmp_flatrange_addr cmp_flatrange_addr_arm
-#define code_gen_alloc code_gen_alloc_arm
 #define commonNaNToFloat128 commonNaNToFloat128_arm
 #define commonNaNToFloat16 commonNaNToFloat16_arm
 #define commonNaNToFloat32 commonNaNToFloat32_arm
@@ -281,7 +280,6 @@
 #define cpu_exec_init_all cpu_exec_init_all_arm
 #define cpu_exec_step_atomic cpu_exec_step_atomic_arm
 #define cpu_flush_icache_range cpu_flush_icache_range_arm
-#define cpu_gen_init cpu_gen_init_arm
 #define cpu_get_address_space cpu_get_address_space_arm
 #define cpu_get_clock cpu_get_clock_arm
 #define cpu_get_real_ticks cpu_get_real_ticks_arm
