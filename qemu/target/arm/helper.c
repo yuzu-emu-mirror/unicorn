@@ -4252,7 +4252,7 @@ static const ARMCPRegInfo el2_cp_reginfo[] = {
        */
     { "CNTHCTL_EL2", 0,14,1, 3,4,0, ARM_CP_STATE_BOTH, 0,
       PL2_RW, 0, NULL, 3, offsetof(CPUARMState, cp15.cnthctl_el2) },
-    { "CNTVOFF_EL2", 0,140,0, 3,4,3, ARM_CP_STATE_AA64, ARM_CP_IO,
+    { "CNTVOFF_EL2", 0,14,0, 3,4,3, ARM_CP_STATE_AA64, ARM_CP_IO,
       PL2_RW, 0, NULL, 0, offsetof(CPUARMState, cp15.cntvoff_el2), {0, 0},
       NULL, NULL, gt_cntvoff_write },
     { "CNTVOFF", 15,0,14, 0,4,0, 0, ARM_CP_64BIT | ARM_CP_ALIAS | ARM_CP_IO,
